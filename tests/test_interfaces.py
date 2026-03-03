@@ -1,7 +1,7 @@
-"""Tests for event_bus interfaces and base types."""
+"""Tests for command_bus interfaces and base types."""
 
 import pytest
-from event_bus import EventMessage, EventMessageHandler, TransmissibleBaseModel
+from command_bus import CommandMessage, CommandHandler, TransmissibleBaseModel
 
 
 def test_transmissible_base_model_str():
@@ -17,17 +17,17 @@ def test_transmissible_base_model_str():
     assert m.__module__ in s
 
 
-def test_event_message_is_pydantic_model():
-    """EventMessage subclasses can define fields."""
+def test_command_message_is_pydantic_model():
+    """CommandMessage subclasses can define fields."""
 
-    class E(EventMessage):
+    class E(CommandMessage):
         id: str
 
     e = E(id="abc")
     assert e.id == "abc"
 
 
-def test_event_message_handler_abstract():
-    """EventMessageHandler cannot be instantiated without process()."""
+def test_command_handler_abstract():
+    """CommandHandler cannot be instantiated without process()."""
     with pytest.raises(TypeError):
-        EventMessageHandler()
+        CommandHandler()

@@ -1,4 +1,4 @@
-"""Response store adapters for request/response over the event bus (Redis, in-memory, file, etc.)."""
+"""Response store adapters for request/response over the command bus (Redis, in-memory, file, etc.)."""
 
 from .file import FileResponseStore
 from .in_memory import InMemoryResponseStore

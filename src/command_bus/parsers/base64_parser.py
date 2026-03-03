@@ -4,18 +4,18 @@ import base64
 import gzip
 from typing import Any, Dict, Optional, Type
 
-from ..interfaces import EventMessage
+from ..interfaces import CommandMessage
 from .base import MessageParserBase
 from .repr_parser import ReprMessageParser
 
 
 class Base64MessageParser(MessageParserBase):
     """
-    Parses base64-encoded strings into EventMessage instances.
+    Parses base64-encoded strings into CommandMessage instances.
 
     Decodes the input from base64, optionally decompresses with gzip, then
     delegates to an inner parser (e.g. ReprMessageParser or JsonMessageParser).
-    Useful when sending compressed or encoded commands over the event bus.
+    Useful when sending compressed or encoded commands over the command bus.
 
     Example (repr format, compressed):
         raw = base64.b64encode(gzip.compress(b"mymodule.OrderCreated(order_id='x')")).decode()
@@ -40,7 +40,7 @@ class Base64MessageParser(MessageParserBase):
         self._decompress = decompress
         self._inner_parser_kwargs = inner_parser_kwargs or {}
 
-    def initialize(self) -> EventMessage:
+    def initialize(self) -> CommandMessage:
         """Decode (and optionally decompress), then parse with the inner parser."""
         decoded_bytes = base64.b64decode(self._encoded)
         if self._decompress:

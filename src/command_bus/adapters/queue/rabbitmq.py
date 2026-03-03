@@ -1,11 +1,11 @@
-"""RabbitMQ-backed event bus adapter."""
+"""RabbitMQ-backed command bus adapter."""
 
 from typing import Any, List, Optional
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
 
-from ...interfaces import EventBusAdapter, EventMessage
+from ...interfaces import CommandBusAdapter, CommandMessage
 
 
 class _RabbitMQMessage:
@@ -22,8 +22,8 @@ class _RabbitMQMessage:
         self._channel.basic_ack(self._delivery_tag)
 
 
-class RabbitMqEventBusAdapter(EventBusAdapter):
-    """EventBus adapter using RabbitMQ for queue operations (via pika)."""
+class RabbitMqCommandBusAdapter(CommandBusAdapter):
+    """CommandBus adapter using RabbitMQ for queue operations (via pika)."""
 
     def __init__(
         self,
@@ -63,7 +63,7 @@ class RabbitMqEventBusAdapter(EventBusAdapter):
 
     def enqueue(
         self,
-        message_instance: EventMessage,
+        message_instance: CommandMessage,
         delay_seconds: int = 0,
     ) -> None:
         """Add a message to the queue. (delay_seconds is ignored; use a delayed-exchange plugin for delays.)"""

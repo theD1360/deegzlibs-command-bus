@@ -1,4 +1,4 @@
-"""File-based queue adapter for persistent cross-process event queuing."""
+"""File-based queue adapter for persistent cross-process command queuing."""
 
 import fcntl
 import json
@@ -7,10 +7,10 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
-from ...interfaces import EventBusAdapter, EventMessage
+from ...interfaces import CommandBusAdapter, CommandMessage
 
 
-class FileQueueAdapter(EventBusAdapter):
+class FileQueueAdapter(CommandBusAdapter):
     """File-based queue adapter that persists to disk for cross-process access."""
 
     def __init__(
@@ -76,7 +76,7 @@ class FileQueueAdapter(EventBusAdapter):
         except Exception as e:
             raise RuntimeError(f"Failed to save queue: {e}") from e
 
-    def enqueue(self, message_instance: EventMessage, delay_seconds: int = 0) -> None:
+    def enqueue(self, message_instance: CommandMessage, delay_seconds: int = 0) -> None:
         """Add a message to the queue."""
         try:
             self._acquire_lock()

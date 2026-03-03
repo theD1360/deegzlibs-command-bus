@@ -5,11 +5,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from event_bus import EventBus, EventBusRegistry, EventMessage, EventMessageHandler
-from event_bus.adapters import FileQueueAdapter
+from command_bus import CommandBus, CommandBusRouter, CommandMessage, CommandHandler
+from command_bus.adapters import FileQueueAdapter
 
 
-class SampleMessage(EventMessage):
+class SampleMessage(CommandMessage):
     value: str
     number: int = 0
 
@@ -192,24 +192,24 @@ def test_file_queue_adapter_message_wrapper():
 
 
 @pytest.mark.asyncio
-async def test_file_queue_adapter_with_event_bus():
-    """Test FileQueueAdapter integration with EventBus."""
+async def test_file_queue_adapter_with_command_bus():
+    """Test FileQueueAdapter integration with CommandBus."""
     with TemporaryDirectory() as tmpdir:
         queue_file = Path(tmpdir) / "queue.json"
         adapter = FileQueueAdapter(
-            queue_name="events", 
+            queue_name="commands", 
             storage_file=queue_file,
             default_visibility_timeout=0  # No hiding for this test
         )
-        registry = EventBusRegistry()
+        registry = CommandBusRouter()
         received: list[str] = []
 
-        class Handler(EventMessageHandler):
-            def process(self, message: EventMessage):
+        class Handler(CommandHandler):
+            def process(self, message: CommandMessage):
                 received.append(message.value)
 
         registry.register(SampleMessage, Handler)
-        bus = EventBus(queue_adapter=adapter, event_registry=registry)
+        bus = CommandBus(queue_adapter=adapter, command_router=registry)
 
         # Execute messages
         await bus.execute(SampleMessage(value="msg1"), wait=False)

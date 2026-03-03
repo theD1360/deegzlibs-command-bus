@@ -3,10 +3,10 @@
 ## Core package
 
 ```bash
-pip install deegzlibs-event-bus
+pip install deegzlibs-command-bus
 ```
 
-This gives you the event bus, in-memory queue adapter, in-memory response store, and repr/JSON/Base64 parsers.
+This gives you the command bus, in-memory queue adapter, in-memory response store, and repr/JSON/Base64 parsers.
 
 ## Optional extras
 
@@ -19,13 +19,13 @@ This gives you the event bus, in-memory queue adapter, in-memory response store,
 Examples:
 
 ```bash
-pip install deegzlibs-event-bus[sqs]
-pip install deegzlibs-event-bus[redis]
-pip install deegzlibs-event-bus[rabbitmq]
+pip install deegzlibs-command-bus[sqs]
+pip install deegzlibs-command-bus[redis]
+pip install deegzlibs-command-bus[rabbitmq]
 ```
 
 Install multiple extras with a comma:
 
 ```bash
-pip install deegzlibs-event-bus[sqs,redis]
+pip install deegzlibs-command-bus[sqs,redis]
 ```

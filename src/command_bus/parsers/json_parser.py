@@ -3,14 +3,14 @@
 import json
 from typing import Any, Dict
 
-from ..interfaces import EventMessage
+from ..interfaces import CommandMessage
 from ..utils import ModuleImporter
 from .base import MessageParserBase
 
 
 class JsonMessageParser(MessageParserBase):
     """
-    Parses JSON strings into EventMessage instances.
+    Parses JSON strings into CommandMessage instances.
 
     Expected format: a JSON object with a type field that holds the fully
     qualified message class name (module.path.ClassName). The remaining
@@ -30,8 +30,8 @@ class JsonMessageParser(MessageParserBase):
         self._payload: Dict[str, Any] = json.loads(message_string)
         self._type_key = type_key
 
-    def initialize(self) -> EventMessage:
-        """Parse the JSON and return an EventMessage instance."""
+    def initialize(self) -> CommandMessage:
+        """Parse the JSON and return a CommandMessage instance."""
         payload = dict(self._payload)
         type_value = payload.pop(self._type_key, None)
         if type_value is None:
@@ -53,6 +53,6 @@ class JsonMessageParser(MessageParserBase):
 
         importer = ModuleImporter(module_path)
         message_class = importer.get_class(class_name)
-        if not issubclass(message_class, EventMessage):
-            raise ValueError(f"Class {type_value!r} is not an EventMessage subclass")
+        if not issubclass(message_class, CommandMessage):
+            raise ValueError(f"Class {type_value!r} is not a CommandMessage subclass")
         return message_class(**payload)

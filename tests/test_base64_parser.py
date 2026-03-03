@@ -5,10 +5,10 @@ import gzip
 import json
 
 import pytest
-from event_bus import Base64MessageParser, EventMessage, JsonMessageParser
+from command_bus import Base64MessageParser, CommandMessage, JsonMessageParser
 
 
-class Command(EventMessage):
+class Command(CommandMessage):
     name: str
     value: int
 

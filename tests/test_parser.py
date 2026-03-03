@@ -1,10 +1,10 @@
 """Tests for message parsers (parsers package)."""
 
 import pytest
-from event_bus import EventMessage, MessageParser, MessageParserBase, ReprMessageParser
+from command_bus import CommandMessage, MessageParser, MessageParserBase, ReprMessageParser
 
 
-class SimpleMessage(EventMessage):
+class SimpleMessage(CommandMessage):
     x: int
     y: str
 
@@ -66,7 +66,7 @@ def test_custom_parser_implements_base():
         def __init__(self, raw: str) -> None:
             self.raw = raw
 
-        def initialize(self) -> EventMessage:
+        def initialize(self) -> CommandMessage:
             return SimpleMessage(x=0, y=self.raw)
 
     parser = SimpleParser("hello")

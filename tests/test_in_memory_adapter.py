@@ -1,12 +1,12 @@
 """Tests for in-memory queue adapter."""
 
 import pytest
-from event_bus import EventBus, EventBusRegistry, EventMessage, EventMessageHandler
-from event_bus.adapters import InMemoryEventBusAdapter
-from event_bus.adapters.queue.in_memory import _InMemoryMessage
+from command_bus import CommandBus, CommandBusRouter, CommandMessage, CommandHandler
+from command_bus.adapters import InMemoryCommandBusAdapter
+from command_bus.adapters.queue.in_memory import _InMemoryMessage
 
 
-class DummyMessage(EventMessage):
+class DummyMessage(CommandMessage):
     id: str
 
 
@@ -17,7 +17,7 @@ def test_in_memory_message_wrapper():
 
 
 def test_in_memory_adapter_enqueue_and_get_messages():
-    adapter = InMemoryEventBusAdapter(queue_name="q")
+    adapter = InMemoryCommandBusAdapter(queue_name="q")
     msg = DummyMessage(id="x")
     adapter.enqueue(msg, delay_seconds=0)
     adapter.enqueue(DummyMessage(id="y"))
@@ -34,7 +34,7 @@ def test_in_memory_adapter_enqueue_and_get_messages():
 
 
 def test_in_memory_adapter_fifo():
-    adapter = InMemoryEventBusAdapter()
+    adapter = InMemoryCommandBusAdapter()
     adapter.enqueue(DummyMessage(id="1"))
     adapter.enqueue(DummyMessage(id="2"))
     one = adapter.get_messages(max_messages=1)[0]
@@ -44,17 +44,17 @@ def test_in_memory_adapter_fifo():
 
 
 @pytest.mark.asyncio
-async def test_in_memory_event_bus_execute_and_work():
-    adapter = InMemoryEventBusAdapter(queue_name="events")
-    registry = EventBusRegistry()
+async def test_in_memory_command_bus_execute_and_work():
+    adapter = InMemoryCommandBusAdapter(queue_name="events")
+    registry = CommandBusRouter()
     received: list[str] = []
 
-    class Handler(EventMessageHandler):
-        def process(self, message: EventMessage):
+    class Handler(CommandHandler):
+        def process(self, message: CommandMessage):
             received.append(message.id)
 
     registry.register(DummyMessage, Handler)
-    bus = EventBus(queue_adapter=adapter, event_registry=registry)
+    bus = CommandBus(queue_adapter=adapter, command_router=registry)
     await bus.execute(DummyMessage(id="a"), wait=False)
     await bus.execute(DummyMessage(id="b"), wait=False)
     await bus.work()  # processes one message (default max_messages=1)

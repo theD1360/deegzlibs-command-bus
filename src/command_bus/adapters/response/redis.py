@@ -1,4 +1,4 @@
-"""Redis-backed response store for request/response over the event bus."""
+"""Redis-backed response store for request/response over the command bus."""
 
 import json
 from typing import Any, Optional
@@ -23,7 +23,7 @@ def _deserialize(raw: Optional[bytes]) -> Optional[Any]:
 class RedisResponseStore(ResponseStore):
     """
     Store handler results in Redis keyed by correlation_id.
-    Use with EventBus(response_store=...) and execute_and_wait() on the client.
+    Use with CommandBus(response_store=...) and execute_and_wait() on the client.
     Values are JSON-serialized; Pydantic models are stored via model_dump().
     """
 

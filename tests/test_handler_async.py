@@ -1,21 +1,21 @@
 """Tests for async handler dispatch."""
 
 import pytest
-from event_bus import EventBusRegistry, EventMessage, EventMessageHandler, MessageParser
+from command_bus import CommandBusRouter, CommandMessage, CommandHandler, MessageParser
 
 
-class AsyncMessage(EventMessage):
+class AsyncMessage(CommandMessage):
     name: str
 
 
-class AsyncHandler(EventMessageHandler):
-    async def process(self, message: EventMessage):
+class AsyncHandler(CommandHandler):
+    async def process(self, message: CommandMessage):
         return f"ok:{message.name}"
 
 
 @pytest.mark.asyncio
 async def test_dispatch_calls_async_handler():
-    registry = EventBusRegistry()
+    registry = CommandBusRouter()
     registry.register(AsyncMessage, AsyncHandler)
     parser = MessageParser("tests.test_handler_async.AsyncMessage(name='test')")
     msg = parser.initialize()

@@ -4,16 +4,16 @@ import asyncio
 from unittest.mock import MagicMock
 
 import pytest
-from event_bus import EventBus, EventBusRegistry, EventMessage, EventMessageHandler
-from event_bus.adapters import InMemoryResponseStore, SqsEventBusAdapter
+from command_bus import CommandBus, CommandBusRouter, CommandMessage, CommandHandler
+from command_bus.adapters import InMemoryResponseStore, SqsCommandBusAdapter
 
 
-class GetPrice(EventMessage):
+class GetPrice(CommandMessage):
     product_id: str
 
 
-class PriceHandler(EventMessageHandler):
-    def process(self, message: EventMessage):
+class PriceHandler(CommandHandler):
+    def process(self, message: CommandMessage):
         return {"price_cents": 999, "product_id": message.product_id}
 
 
@@ -25,8 +25,8 @@ def test_event_message_has_correlation_id():
 
 
 def test_execute_and_wait_raises_without_response_store():
-    adapter = MagicMock(spec=SqsEventBusAdapter)
-    bus = EventBus(queue_adapter=adapter, event_registry=EventBusRegistry())
+    adapter = MagicMock(spec=SqsCommandBusAdapter)
+    bus = CommandBus(queue_adapter=adapter, command_router=CommandBusRouter())
     bus.registry.register(GetPrice, PriceHandler)
 
     with pytest.raises(ValueError, match="response_store"):
@@ -37,9 +37,9 @@ def test_execute_and_wait_raises_without_response_store():
 async def test_execute_and_wait_returns_result_when_stored():
     adapter = MagicMock()
     store = InMemoryResponseStore()
-    registry = EventBusRegistry()
+    registry = CommandBusRouter()
     registry.register(GetPrice, PriceHandler)
-    bus = EventBus(queue_adapter=adapter, event_registry=registry, response_store=store)
+    bus = CommandBus(queue_adapter=adapter, command_router=registry, response_store=store)
 
     # Run execute_and_wait in a task; after a short delay simulate worker storing the result
     # (using the correlation_id from the enqueued message)
@@ -65,9 +65,9 @@ async def test_execute_and_wait_returns_result_when_stored():
 async def test_execute_and_wait_times_out_when_not_stored():
     adapter = MagicMock()
     store = InMemoryResponseStore()
-    registry = EventBusRegistry()
+    registry = CommandBusRouter()
     registry.register(GetPrice, PriceHandler)
-    bus = EventBus(queue_adapter=adapter, event_registry=registry, response_store=store)
+    bus = CommandBus(queue_adapter=adapter, command_router=registry, response_store=store)
 
     with pytest.raises(TimeoutError, match="No response"):
         await bus.execute_and_wait(
@@ -81,15 +81,15 @@ async def test_execute_and_wait_times_out_when_not_stored():
 async def test_dispatch_stores_handler_result_when_correlation_id_and_response_store_set():
     """When event has correlation_id and bus has response_store, dispatch stores last handler return."""
     store = InMemoryResponseStore()
-    registry = EventBusRegistry()
+    registry = CommandBusRouter()
     registry.register(GetPrice, PriceHandler)
     # Use real parser and adapter that we don't need to call (we only call dispatch with a string)
-    from event_bus.parsers import ReprMessageParser
+    from command_bus.parsers import ReprMessageParser
 
     adapter = MagicMock()
-    bus = EventBus(
+    bus = CommandBus(
         queue_adapter=adapter,
-        event_registry=registry,
+        command_router=registry,
         response_store=store,
         message_parser_class=ReprMessageParser,
     )
@@ -102,7 +102,7 @@ async def test_dispatch_stores_handler_result_when_correlation_id_and_response_s
 
 def test_redis_response_store_mock():
     """RedisResponseStore set/get/delete with mocked redis client."""
-    from event_bus.adapters.response.redis import RedisResponseStore
+    from command_bus.adapters.response.redis import RedisResponseStore
 
     redis_mock = MagicMock()
     redis_mock.get.return_value = None

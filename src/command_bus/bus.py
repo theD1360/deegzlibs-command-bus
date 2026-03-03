@@ -1,4 +1,4 @@
-"""Generic event bus: coordinates an adapter and registry."""
+"""Generic command bus: coordinates an adapter and router."""
 
 import asyncio
 import logging
@@ -6,21 +6,21 @@ import time
 import uuid
 from typing import Any, Optional, Type
 
-from .interfaces import EventBusAdapter, EventBusInterface, EventMessage, ResponseStore
+from .interfaces import CommandBusAdapter, CommandBusInterface, CommandMessage, ResponseStore
 from .parsers import MessageParserBase, ReprMessageParser
-from .registry import EventBusRegistry
+from .registry import CommandBusRouter
 
 logger = logging.getLogger(__name__)
 
 
-class EventBus(EventBusInterface):
+class CommandBus(CommandBusInterface):
     """
-    Generic event bus that uses any EventBusAdapter for queue operations
-    and an EventBusRegistry for handler lookup. Use with SqsEventBusAdapter,
-    RabbitMqEventBusAdapter, or any custom adapter.
+    Generic command bus that uses any CommandBusAdapter for queue operations
+    and a CommandBusRouter for handler lookup. Use with SqsCommandBusAdapter,
+    RabbitMqCommandBusAdapter, or any custom adapter.
 
-    event_registry is optional; if omitted, a new EventBusRegistry() is used.
-    You can still use EventBusRegistry independently and pass it in when you
+    command_router is optional; if omitted, a new CommandBusRouter() is used.
+    You can still use CommandBusRouter independently and pass it in when you
     want to share or preconfigure it.
 
     response_store is optional; when set, the bus can store handler return values
@@ -29,15 +29,15 @@ class EventBus(EventBusInterface):
 
     def __init__(
         self,
-        queue_adapter: EventBusAdapter,
-        event_registry: Optional[EventBusRegistry] = None,
+        queue_adapter: CommandBusAdapter,
+        command_router: Optional[CommandBusRouter] = None,
         message_parser_class: Optional[Type[MessageParserBase]] = None,
         response_store: Optional[ResponseStore] = None,
         response_ttl_seconds: int = 60,
     ) -> None:
         self.queue_adapter = queue_adapter
         self.registry = (
-            event_registry if event_registry is not None else EventBusRegistry()
+            command_router if command_router is not None else CommandBusRouter()
         )
         self.message_parser_class = message_parser_class or ReprMessageParser
         self.response_store = response_store
@@ -45,10 +45,10 @@ class EventBus(EventBusInterface):
 
     def _enqueue(
         self,
-        message_instance: EventMessage,
+        message_instance: CommandMessage,
         delay_seconds: int = 0,
     ) -> None:
-        """Enqueue an event (internal)."""
+        """Enqueue a command (internal)."""
         matched_handlers = self.registry.get_handlers_for_message(message_instance)
         if not matched_handlers:
             raise ValueError(f"No handler found for {message_instance}")
@@ -56,7 +56,7 @@ class EventBus(EventBusInterface):
 
     async def execute(
         self,
-        message_instance: EventMessage,
+        message_instance: CommandMessage,
         delay_seconds: Optional[int] = None,
         wait: Optional[bool] = None,
         timeout_seconds: float = 30.0,
@@ -64,11 +64,11 @@ class EventBus(EventBusInterface):
         response_ttl_seconds: Optional[int] = None,
     ) -> Any:
         """
-        Enqueue the event and optionally wait for a response.
+        Enqueue the command and optionally wait for a response.
 
         When a response_store is set, default is wait=True (enqueue with correlation_id
         and return the handler result). Pass wait=False for fire-and-forget.
-        When no response_store is set, wait is ignored and the event is only enqueued.
+        When no response_store is set, wait is ignored and the command is only enqueued.
 
         Returns the handler result when wait=True, None otherwise.
         """
@@ -105,7 +105,7 @@ class EventBus(EventBusInterface):
 
     async def execute_and_wait(
         self,
-        message_instance: EventMessage,
+        message_instance: CommandMessage,
         timeout_seconds: float = 30.0,
         poll_interval_seconds: float = 0.5,
         response_ttl_seconds: Optional[int] = None,
@@ -124,29 +124,29 @@ class EventBus(EventBusInterface):
     async def dispatch(self, raw_message: str) -> None:
         """Parse the raw message (using the configured parser), then run all registered handlers."""
         parser = self.message_parser_class(raw_message)
-        event_instance = parser.initialize()
-        registry_entries = self.registry.get_handlers_for_message(event_instance)
+        command_instance = parser.initialize()
+        registry_entries = self.registry.get_handlers_for_message(command_instance)
         logger.info("%d handlers found", len(registry_entries))
 
         last_result: Any = None
         for entry in registry_entries:
             handler = entry.handler_instance()
-            result = await handler(event_instance)
+            result = await handler(command_instance)
             if result is not None:
                 last_result = result
             logger.info(
-                "Dispatched event %s to %s handler",
-                event_instance,
+                "Dispatched command %s to %s handler",
+                command_instance,
                 entry.handler_class,
             )
 
         if (
-            event_instance.correlation_id
+            command_instance.correlation_id
             and self.response_store is not None
             and last_result is not None
         ):
             self.response_store.set(
-                event_instance.correlation_id,
+                command_instance.correlation_id,
                 last_result,
                 ttl_seconds=self.response_ttl_seconds,
             )
