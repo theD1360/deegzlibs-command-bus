@@ -1,25 +1,25 @@
-"""Tests for registry.event() + bus.execute() with the constructed EventMessage class."""
+"""Tests for router.command() + bus.execute() with the constructed CommandMessage class."""
 
 import asyncio
 from unittest.mock import MagicMock
 
 import pytest
-from event_bus import EventBus, EventBusRegistry
-from event_bus.adapters import (
-    InMemoryEventBusAdapter,
+from command_bus import CommandBus, CommandBusRouter
+from command_bus.adapters import (
+    InMemoryCommandBusAdapter,
     InMemoryResponseStore,
-    SqsEventBusAdapter,
+    SqsCommandBusAdapter,
 )
 
 
 @pytest.mark.asyncio
-async def test_registry_event_call_returns_message_for_bus_execute():
+async def test_router_command_call_returns_message_for_bus_execute():
     """Calling the decorated function returns the message; pass it to bus.execute()."""
-    adapter = MagicMock(spec=SqsEventBusAdapter)
-    registry = EventBusRegistry()
-    bus = EventBus(queue_adapter=adapter, event_registry=registry)
+    adapter = MagicMock(spec=SqsCommandBusAdapter)
+    router = CommandBusRouter()
+    bus = CommandBus(queue_adapter=adapter, command_router=router)
 
-    @registry.event()
+    @router.command()
     def on_created(order_id: str, amount_cents: int):
         return {"order_id": order_id}
 
@@ -31,18 +31,18 @@ async def test_registry_event_call_returns_message_for_bus_execute():
 
 
 @pytest.mark.asyncio
-async def test_registry_event_message_class_works_with_execute_and_wait():
+async def test_router_command_message_class_works_with_execute_and_wait():
     """get_price(...) returns the message; pass to execute(wait=True)."""
     adapter = MagicMock()
     store = InMemoryResponseStore()
-    registry = EventBusRegistry()
-    bus = EventBus(
+    router = CommandBusRouter()
+    bus = CommandBus(
         queue_adapter=adapter,
-        event_registry=registry,
+        command_router=router,
         response_store=store,
     )
 
-    @registry.event()
+    @router.command()
     def get_price(product_id: str) -> dict:
         return {"price_cents": 99, "product_id": product_id}
 
@@ -67,14 +67,14 @@ async def test_registry_event_message_class_works_with_execute_and_wait():
 
 
 @pytest.mark.asyncio
-async def test_registry_event_then_bus_execute_and_work():
+async def test_router_command_then_bus_execute_and_work():
     """Full flow: bus.execute(on_created(...), wait=False) and bus.work()."""
-    adapter = InMemoryEventBusAdapter(queue_name="events")
-    registry = EventBusRegistry()
-    bus = EventBus(queue_adapter=adapter, event_registry=registry)
+    adapter = InMemoryCommandBusAdapter(queue_name="commands")
+    router = CommandBusRouter()
+    bus = CommandBus(queue_adapter=adapter, command_router=router)
     received: list[str] = []
 
-    @registry.event()
+    @router.command()
     def on_created(order_id: str, amount_cents: int):
         received.append(order_id)
 

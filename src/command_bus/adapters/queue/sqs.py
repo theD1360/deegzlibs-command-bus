@@ -1,12 +1,12 @@
-"""SQS-backed event bus adapter."""
+"""SQS-backed command bus adapter."""
 
 from typing import Any
 
-from ...interfaces import EventBusAdapter, EventMessage
+from ...interfaces import CommandBusAdapter, CommandMessage
 
 
-class SqsEventBusAdapter(EventBusAdapter):
-    """EventBus adapter using AWS SQS for queue operations."""
+class SqsCommandBusAdapter(CommandBusAdapter):
+    """CommandBus adapter using AWS SQS for queue operations."""
 
     def __init__(self, queue_name: str, sqs_client: Any) -> None:
         self.queue_name = queue_name
@@ -17,7 +17,7 @@ class SqsEventBusAdapter(EventBusAdapter):
 
     def enqueue(
         self,
-        message_instance: EventMessage,
+        message_instance: CommandMessage,
         delay_seconds: int = 0,
     ) -> None:
         """Add a message to the queue."""

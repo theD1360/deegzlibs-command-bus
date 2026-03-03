@@ -1,59 +1,59 @@
 # Queue adapters
 
-The bus uses an **EventBusAdapter** to enqueue and dequeue messages. Adapters are responsible for transport only; the bus handles parsing and handler dispatch.
+The bus uses a **CommandBusAdapter** to enqueue and dequeue messages. Adapters are responsible for transport only; the bus handles parsing and handler dispatch.
 
 ## In-memory
 
-**InMemoryEventBusAdapter** – FIFO queue in process. No extra dependencies. Useful for tests or single-process use. `delay_seconds` is ignored.
+**InMemoryCommandBusAdapter** – FIFO queue in process. No extra dependencies. Useful for tests or single-process use. `delay_seconds` is ignored.
 
 ```python
-from event_bus import EventBus, EventBusRegistry
-from event_bus.adapters import InMemoryEventBusAdapter
+from command_bus import CommandBus, CommandBusRouter
+from command_bus.adapters import InMemoryCommandBusAdapter
 
-adapter = InMemoryEventBusAdapter(queue_name="events")
-bus = EventBus(queue_adapter=adapter)
+adapter = InMemoryCommandBusAdapter(queue_name="commands")
+bus = CommandBus(queue_adapter=adapter)
 ```
 
-Constructor: **`InMemoryEventBusAdapter(queue_name: str = "default")`**
+Constructor: **`InMemoryCommandBusAdapter(queue_name: str = "default")`**
 
 ---
 
 ## SQS
 
-**SqsEventBusAdapter** – AWS SQS. Install with `pip install deegzlibs-event-bus[sqs]`.
+**SqsCommandBusAdapter** – AWS SQS. Install with `pip install deegzlibs-command-bus[sqs]`.
 
 ```python
 import boto3
-from event_bus import EventBus, EventBusRegistry
-from event_bus.adapters import SqsEventBusAdapter
+from command_bus import CommandBus, CommandBusRouter
+from command_bus.adapters import SqsCommandBusAdapter
 
 sqs = boto3.resource("sqs")
-adapter = SqsEventBusAdapter(queue_name="my-events", sqs_client=sqs)
-registry = EventBusRegistry()
-bus = EventBus(queue_adapter=adapter, event_registry=registry)
+adapter = SqsCommandBusAdapter(queue_name="my-commands", sqs_client=sqs)
+router = CommandBusRouter()
+bus = CommandBus(queue_adapter=adapter, command_router=router)
 ```
 
-Constructor: **`SqsEventBusAdapter(queue_name: str, sqs_client)`** – `sqs_client` is a boto3 SQS resource.
+Constructor: **`SqsCommandBusAdapter(queue_name: str, sqs_client)`** – `sqs_client` is a boto3 SQS resource.
 
 ---
 
 ## RabbitMQ
 
-**RabbitMqEventBusAdapter** – RabbitMQ via pika. Install with `pip install deegzlibs-event-bus[rabbitmq]`.
+**RabbitMqCommandBusAdapter** – RabbitMQ via pika. Install with `pip install deegzlibs-command-bus[rabbitmq]`.
 
 ```python
-from event_bus import EventBus, EventBusRegistry
-from event_bus.adapters import RabbitMqEventBusAdapter
+from command_bus import CommandBus, CommandBusRouter
+from command_bus.adapters import RabbitMqCommandBusAdapter
 
-adapter = RabbitMqEventBusAdapter(
-    queue_name="my-events",
+adapter = RabbitMqCommandBusAdapter(
+    queue_name="my-commands",
     connection_url="amqp://guest:guest@localhost/",
 )
 # Or: connection_params=pika.ConnectionParameters(host='localhost', port=5672)
-bus = EventBus(queue_adapter=adapter)
+bus = CommandBus(queue_adapter=adapter)
 ```
 
-Constructor: **`RabbitMqEventBusAdapter(queue_name, connection_url=None, connection_params=None)`** – provide either `connection_url` or `connection_params`.
+Constructor: **`RabbitMqCommandBusAdapter(queue_name, connection_url=None, connection_params=None)`** – provide either `connection_url` or `connection_params`.
 
 - **`delay_seconds`** is not supported by plain RabbitMQ (use a delayed-message plugin if needed).
 - The adapter keeps a single connection for consuming. Call **`adapter.close()`** when shutting down workers to release it.
@@ -62,19 +62,19 @@ Constructor: **`RabbitMqEventBusAdapter(queue_name, connection_url=None, connect
 
 ## Redis
 
-**RedisEventBusAdapter** – Redis Lists (LPUSH/BRPOP). Install with `pip install deegzlibs-event-bus[redis]`. You can use the same Redis instance for the queue and for the [response store](execute-and-wait.md) (e.g. `execute_and_wait`).
+**RedisCommandBusAdapter** – Redis Lists (LPUSH/BRPOP). Install with `pip install deegzlibs-command-bus[redis]`. You can use the same Redis instance for the queue and for the [response store](execute-and-wait.md) (e.g. `execute_and_wait`).
 
 ```python
 import redis
-from event_bus import EventBus
-from event_bus.adapters import RedisEventBusAdapter
+from command_bus import CommandBus
+from command_bus.adapters import RedisCommandBusAdapter
 
 r = redis.Redis(host="localhost", port=6379)
-adapter = RedisEventBusAdapter(redis_client=r, queue_name="events")
-bus = EventBus(queue_adapter=adapter)
+adapter = RedisCommandBusAdapter(redis_client=r, queue_name="commands")
+bus = CommandBus(queue_adapter=adapter)
 ```
 
-Constructor: **`RedisEventBusAdapter(redis_client, queue_name: str)`**.
+Constructor: **`RedisCommandBusAdapter(redis_client, queue_name: str)`**.
 
 - **`delay_seconds`** is not supported (Redis List has no native delay).
 - Messages are removed when popped; failed handlers do not automatically requeue.

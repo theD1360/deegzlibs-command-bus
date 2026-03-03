@@ -6,17 +6,17 @@ pytest.importorskip("pika")
 
 from unittest.mock import MagicMock, patch
 
-from event_bus import EventBus, EventBusRegistry, EventMessage
-from event_bus.adapters.queue.rabbitmq import RabbitMqEventBusAdapter, _RabbitMQMessage
+from command_bus import CommandBus, CommandBusRouter, CommandMessage
+from command_bus.adapters.queue.rabbitmq import RabbitMqCommandBusAdapter, _RabbitMQMessage
 
 
-class DummyMessage(EventMessage):
+class DummyMessage(CommandMessage):
     id: str
 
 
 def test_rabbitmq_adapter_requires_connection():
     with pytest.raises(ValueError, match="connection_url or connection_params"):
-        RabbitMqEventBusAdapter(queue_name="q")
+        RabbitMqCommandBusAdapter(queue_name="q")
 
 
 def test_rabbitmq_message_wrapper_delete_acks():
@@ -26,14 +26,14 @@ def test_rabbitmq_message_wrapper_delete_acks():
     channel.basic_ack.assert_called_once_with(7)
 
 
-@patch("event_bus.adapters.queue.rabbitmq.pika")
+@patch("command_bus.adapters.queue.rabbitmq.pika")
 def test_rabbitmq_adapter_enqueue(pika_mock):
     conn = MagicMock()
     ch = MagicMock()
     pika_mock.BlockingConnection.return_value = conn
     conn.channel.return_value = ch
 
-    adapter = RabbitMqEventBusAdapter(
+    adapter = RabbitMqCommandBusAdapter(
         queue_name="test-q", connection_url="amqp://localhost/"
     )
     msg = DummyMessage(id="x")
@@ -48,24 +48,24 @@ def test_rabbitmq_adapter_enqueue(pika_mock):
 
 
 @pytest.mark.asyncio
-async def test_rabbitmq_event_bus_execute_raises_when_no_handler():
+async def test_rabbitmq_command_bus_execute_raises_when_no_handler():
     adapter = MagicMock()
-    registry = EventBusRegistry()
-    bus = EventBus(queue_adapter=adapter, event_registry=registry)
+    registry = CommandBusRouter()
+    bus = CommandBus(queue_adapter=adapter, command_router=registry)
     with pytest.raises(ValueError, match="No handler found"):
         await bus.execute(DummyMessage(id="y"), wait=False)
 
 
 @pytest.mark.asyncio
-async def test_rabbitmq_event_bus_execute_enqueues_when_handler_registered():
+async def test_rabbitmq_command_bus_execute_enqueues_when_handler_registered():
     adapter = MagicMock()
-    registry = EventBusRegistry()
+    registry = CommandBusRouter()
 
     class DummyHandler:
         def process(self, message):
             pass
 
     registry.register(DummyMessage, DummyHandler)
-    bus = EventBus(queue_adapter=adapter, event_registry=registry)
+    bus = CommandBus(queue_adapter=adapter, command_router=registry)
     await bus.execute(DummyMessage(id="z"), delay_seconds=0, wait=False)
     adapter.enqueue.assert_called_once()

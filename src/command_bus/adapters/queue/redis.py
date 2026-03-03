@@ -1,8 +1,8 @@
-"""Redis-backed event bus adapter using Redis Lists (LPUSH/BRPOP)."""
+"""Redis-backed command bus adapter using Redis Lists (LPUSH/BRPOP)."""
 
 from typing import Any, List
 
-from ...interfaces import EventBusAdapter, EventMessage
+from ...interfaces import CommandBusAdapter, CommandMessage
 
 
 class _RedisMessage:
@@ -18,9 +18,9 @@ class _RedisMessage:
         pass
 
 
-class RedisEventBusAdapter(EventBusAdapter):
+class RedisCommandBusAdapter(CommandBusAdapter):
     """
-    EventBus adapter using a Redis List for queue operations (LPUSH to enqueue, BRPOP to consume).
+    CommandBus adapter using a Redis List for queue operations (LPUSH to enqueue, BRPOP to consume).
     FIFO: producers LPUSH, workers BRPOP. delay_seconds is not supported (use a delayed-queue pattern separately if needed).
     """
 
@@ -30,7 +30,7 @@ class RedisEventBusAdapter(EventBusAdapter):
 
     def enqueue(
         self,
-        message_instance: EventMessage,
+        message_instance: CommandMessage,
         delay_seconds: int = 0,
     ) -> None:
         """Add a message to the queue. delay_seconds is ignored (Redis List has no native delay)."""

@@ -1,6 +1,6 @@
-# Using @registry.event() with Separate Client/Worker Processes
+# Using @router.command() with Separate Client/Worker Processes
 
-When using `@registry.event()` with separate client and worker processes, you **must** define your event handlers in a **shared module** that both processes import. This ensures the generated message classes can be properly resolved.
+When using `@router.command()` with separate client and worker processes, you **must** define your command handlers in a **shared module** that both processes import. This ensures the generated message classes can be properly resolved.
 
 ## The Problem
 
@@ -8,33 +8,33 @@ If you define handlers directly in `client.py` and `worker.py` (both running as 
 
 ## The Solution: Shared Module
 
-### Step 1: Create a shared events module
+### Step 1: Create a shared commands module
 
 ```python
-# events.py (shared module)
-from event_bus import EventBus, EventBusRegistry
-from event_bus.adapters import FileQueueAdapter, FileResponseStore
+# commands.py (shared module)
+from command_bus import CommandBus, CommandBusRouter
+from command_bus.adapters import FileQueueAdapter, FileResponseStore
 
-# Create a shared registry
-registry = EventBusRegistry()
+# Create a shared router
+router = CommandBusRouter()
 
 # Define handlers using the decorator
-@registry.event()
+@router.command()
 def on_order_created(order_id: str, amount_cents: int):
     print(f"Processing order {order_id} for {amount_cents} cents")
     return {"status": "processed", "order_id": order_id}
 
-@registry.event()
+@router.command()
 def on_payment_received(order_id: str, amount_cents: int):
     print(f"Payment received for order {order_id}: {amount_cents} cents")
 
 # Factory function to create the bus (shared configuration)
 def create_bus():
-    queue_adapter = FileQueueAdapter(queue_name="events")
+    queue_adapter = FileQueueAdapter(queue_name="commands")
     response_store = FileResponseStore()
-    return EventBus(
+    return CommandBus(
         queue_adapter=queue_adapter,
-        event_registry=registry,
+        command_router=router,
         response_store=response_store,
     )
 ```
@@ -44,7 +44,7 @@ def create_bus():
 ```python
 # client.py
 import asyncio
-from events import create_bus, on_order_created, on_payment_received
+from commands import create_bus, on_order_created, on_payment_received
 
 async def main():
     bus = create_bus()
@@ -64,7 +64,7 @@ if __name__ == "__main__":
 ```python
 # worker.py
 import asyncio
-from events import create_bus  # Import the shared module
+from commands import create_bus  # Import the shared module
 
 async def run_worker():
     bus = create_bus()  # Same configuration as client
@@ -79,9 +79,9 @@ if __name__ == "__main__":
 
 ## Why This Works
 
-1. **Shared module**: Both client and worker import from `events.py`, so the message classes are registered in the same module namespace.
-2. **Module path**: Messages will have paths like `events.on_order_createdMessage(...)` instead of `__main__.on_order_createdMessage(...)`.
-3. **Import resolution**: When the worker parses a message, it can successfully import `events` and find the message class.
+1. **Shared module**: Both client and worker import from `commands.py`, so the message classes are registered in the same module namespace.
+2. **Module path**: Messages will have paths like `commands.on_order_createdMessage(...)` instead of `__main__.on_order_createdMessage(...)`.
+3. **Import resolution**: When the worker parses a message, it can successfully import `commands` and find the message class.
 
 ## Error Messages
 
@@ -90,7 +90,7 @@ If you encounter import errors, you'll now see helpful messages like:
 ```
 Class 'on_order_createdMessage' not found in module '__main__'. 
 This usually happens when client and worker are separate scripts. 
-Solution: Define event handlers in a shared module that both 
+Solution: Define command handlers in a shared module that both 
 client and worker import. See docs/client-and-worker.md
 ```
 

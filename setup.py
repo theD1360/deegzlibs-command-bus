@@ -4,11 +4,11 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="deegzlibs-event-bus",
+    name="deegzlibs-command-bus",
     version="1.0.0",
     author="Diego Alejos",
     author_email="lego.admin@gmail.com",
-    description="A small event bus with pluggable queue adapters (e.g. AWS SQS)",
+    description="A small command bus with pluggable queue adapters (e.g. AWS SQS)",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/deegzlibs/deegzlibs",

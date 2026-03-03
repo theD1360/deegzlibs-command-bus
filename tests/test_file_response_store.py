@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from event_bus.adapters import FileResponseStore
+from command_bus.adapters import FileResponseStore
 
 
 def test_file_response_store_set_get():

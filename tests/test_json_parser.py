@@ -3,15 +3,15 @@
 import json
 
 import pytest
-from event_bus import EventMessage, JsonMessageParser
+from command_bus import CommandMessage, JsonMessageParser
 
 
-class OrderCreated(EventMessage):
+class OrderCreated(CommandMessage):
     order_id: str
     amount_cents: int
 
 
-class NestedMessage(EventMessage):
+class NestedMessage(CommandMessage):
     name: str
     count: int
 
@@ -76,8 +76,8 @@ def test_json_parser_invalid_class_raises():
         parser.initialize()
 
 
-def test_json_parser_not_event_message_class_raises():
-    # Builtin type is not an EventMessage subclass
+def test_json_parser_not_command_message_class_raises():
+    # Builtin type is not a CommandMessage subclass
     parser = JsonMessageParser(json.dumps({"__type__": "builtins.dict", "x": 1}))
-    with pytest.raises(ValueError, match="not an EventMessage subclass"):
+    with pytest.raises(ValueError, match="is not a CommandMessage subclass"):
         parser.initialize()

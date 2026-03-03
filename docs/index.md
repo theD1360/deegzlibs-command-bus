@@ -1,6 +1,6 @@
-# EventBus (Python) — Documentation
+# CommandBus (Python) — Documentation
 
-A small event bus with pluggable queue adapters. Define event messages as Pydantic models, register handlers, and execute events in-process or via a queue (e.g. AWS SQS, RabbitMQ, Redis).
+A small command bus with pluggable queue adapters. Define command messages as Pydantic models, register handlers, and execute commands in-process or via a queue (e.g. AWS SQS, RabbitMQ, Redis).
 
 ## Documentation
 
@@ -8,7 +8,7 @@ A small event bus with pluggable queue adapters. Define event messages as Pydant
 |-------|-------------|
 | [Installation](installation.md) | Install the package and optional extras (SQS, Redis, RabbitMQ). |
 | [Quick start](quickstart.md) | Define messages and handlers, register, and execute. |
-| [Handler decorator](handler-decorator.md) | Use `@registry.event()` to generate the message from a function and get a message factory. |
+| [Handler decorator](handler-decorator.md) | Use `@router.command()` to generate the message from a function and get a message factory. |
 | [Message formats and parsers](message-formats-and-parsers.md) | Repr, JSON, Base64 parsers and how to set a custom parser on the bus. |
 | [Client and worker](client-and-worker.md) | Shared bus factory, producer client, and consumer worker. |
 | [Queue adapters](queue-adapters.md) | In-memory, SQS, RabbitMQ, and Redis adapters. |

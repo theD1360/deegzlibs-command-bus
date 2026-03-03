@@ -1,48 +1,48 @@
 # Client and worker
 
-The **client** (producer) sends events with **`await bus.execute(...)`**. A **worker** (consumer), often in another process or container, polls the queue and runs handlers with **`await bus.work()`**. Both should use the same configuration: same queue name, adapter type, and handler registrations.
+The **client** (producer) sends commands with **`await bus.execute(...)`**. A **worker** (consumer), often in another process or container, polls the queue and runs handlers with **`await bus.work()`**. Both should use the same configuration: same queue name, adapter type, and handler registrations.
 
 ## Shared module
 
-Define events, handlers, and a **single function that builds the bus**. Client and worker import that function so they share configuration.
+Define commands, handlers, and a **single function that builds the bus**. Client and worker import that function so they share configuration.
 
 ```python
-# events.py
+# commands.py
 import boto3
-from event_bus import EventBus, EventBusRegistry, EventMessage, EventMessageHandler
-from event_bus.adapters import SqsEventBusAdapter
+from command_bus import CommandBus, CommandBusRouter, CommandMessage, CommandHandler
+from command_bus.adapters import SqsCommandBusAdapter
 
-registry = EventBusRegistry()
+router = CommandBusRouter()
 
-class OrderCreated(EventMessage):
+class OrderCreated(CommandMessage):
     order_id: str
     amount_cents: int
 
-class SendOrderConfirmation(EventMessageHandler):
-    def process(self, message: EventMessage):
+class SendOrderConfirmation(CommandHandler):
+    def process(self, message: CommandMessage):
         print(f"Sent confirmation for order {message.order_id}")
 
-registry.register(OrderCreated, SendOrderConfirmation)
+router.register(OrderCreated, SendOrderConfirmation)
 
-@registry.event()
+@router.command()
 def on_payment_received(order_id: str, amount_cents: int):
     print(f"Payment received for order {order_id}: {amount_cents} cents")
 
 def create_bus():
     """Shared bus configuration for both client and worker."""
     sqs = boto3.resource("sqs")
-    adapter = SqsEventBusAdapter(queue_name="orders", sqs_client=sqs)
-    bus = EventBus(queue_adapter=adapter, event_registry=registry)
+    adapter = SqsCommandBusAdapter(queue_name="orders", sqs_client=sqs)
+    bus = CommandBus(queue_adapter=adapter, command_router=router)
     return bus
 ```
 
 ## Client (producer)
 
-Get the bus from the shared factory and enqueue events:
+Get the bus from the shared factory and enqueue commands:
 
 ```python
 # client.py
-from events import OrderCreated, create_bus
+from commands import OrderCreated, create_bus
 
 async def main():
     bus = create_bus()
@@ -57,7 +57,7 @@ if __name__ == "__main__":
 With the handler decorator you can use the message factory:
 
 ```python
-from events import create_bus, on_payment_received
+from commands import create_bus, on_payment_received
 
 async def main():
     bus = create_bus()
@@ -71,7 +71,7 @@ Use the same factory, then poll and dispatch in a loop:
 ```python
 # worker.py
 import asyncio
-from events import create_bus
+from commands import create_bus
 
 async def run_worker():
     bus = create_bus()

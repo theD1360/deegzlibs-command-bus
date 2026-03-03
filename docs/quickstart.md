@@ -1,44 +1,44 @@
 # Quick start
 
-## 1. Define event messages
+## 1. Define command messages
 
-Subclass `EventMessage` (a Pydantic model). Use it for the payload of your events.
+Subclass `CommandMessage` (a Pydantic model). Use it for the payload of your commands.
 
 ```python
-from event_bus import EventMessage
+from command_bus import CommandMessage
 
-class OrderCreated(EventMessage):
+class OrderCreated(CommandMessage):
     order_id: str
     amount_cents: int
 ```
 
 ## 2. Define handlers
 
-Implement `EventMessageHandler`: define a class with a `process(self, message)` method. The method can be sync or async.
+Implement `CommandHandler`: define a class with a `process(self, message)` method. The method can be sync or async.
 
 ```python
-from event_bus import EventMessage, EventMessageHandler
+from command_bus import CommandMessage, CommandHandler
 
-class SendOrderConfirmation(EventMessageHandler):
-    def process(self, message: EventMessage):
+class SendOrderConfirmation(CommandHandler):
+    def process(self, message: CommandMessage):
         print(f"Order {message.order_id} confirmed")
 ```
 
 ## 3. Register and execute
 
-Create a registry, register the message type with the handler, then use a bus (with a queue adapter) to execute events. The bus enqueues the message; a worker later runs `await bus.work()` to dispatch to handlers.
+Create a router, register the message type with the handler, then use a bus (with a queue adapter) to execute commands. The bus enqueues the message; a worker later runs `await bus.work()` to dispatch to handlers.
 
 ```python
-from event_bus import EventBus, EventBusRegistry
-from event_bus.adapters import InMemoryEventBusAdapter
+from command_bus import CommandBus, CommandBusRouter
+from command_bus.adapters import InMemoryCommandBusAdapter
 
-registry = EventBusRegistry()
-registry.register(OrderCreated, SendOrderConfirmation)
+router = CommandBusRouter()
+router.register(OrderCreated, SendOrderConfirmation)
 
-adapter = InMemoryEventBusAdapter(queue_name="events")
-bus = EventBus(queue_adapter=adapter, event_registry=registry)
+adapter = InMemoryCommandBusAdapter(queue_name="commands")
+bus = CommandBus(queue_adapter=adapter, command_router=router)
 
-# Enqueue an event (fire-and-forget)
+# Enqueue a command (fire-and-forget)
 await bus.execute(OrderCreated(order_id="ord-1", amount_cents=1999), wait=False)
 
 # Worker: poll queue and run handlers
@@ -50,14 +50,14 @@ await bus.work()
 If you don't use a queue adapter, you can parse a message string and dispatch in-process:
 
 ```python
-from event_bus import MessageParser
+from command_bus import MessageParser
 
 msg_str = "your.module.OrderCreated(order_id='abc', amount_cents=1999)"
 parser = MessageParser(msg_str)
-event = parser.initialize()
-for entry in registry.get_handlers_for_message(event):
+command = parser.initialize()
+for entry in router.get_handlers_for_message(command):
     handler = entry.handler_instance()
-    await handler(event)
+    await handler(command)
 ```
 
 ## Next steps

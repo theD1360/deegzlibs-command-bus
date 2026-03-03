@@ -1,4 +1,4 @@
-"""Registry for mapping event message types to handlers."""
+"""Router for mapping command message types to handlers."""
 
 import inspect
 import sys
@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Optional, Union, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from .interfaces import EventBusRegistryInterface, EventMessage, EventMessageHandler
+from .interfaces import CommandBusRouterInterface, CommandMessage, CommandHandler
 
 
 def get_qual_name(obj: Union[type, object]) -> str:
@@ -16,11 +16,11 @@ def get_qual_name(obj: Union[type, object]) -> str:
     return type(obj).__module__ + "." + type(obj).__name__
 
 
-def _event_message_class_from_signature(
+def _command_message_class_from_signature(
     func: Callable[..., Any],
     model_name: Optional[str] = None,
 ) -> type:
-    """Build an EventMessage subclass whose fields match the function's parameters."""
+    """Build a CommandMessage subclass whose fields match the function's parameters."""
     sig = inspect.signature(func)
     try:
         hints = get_type_hints(func)
@@ -36,7 +36,7 @@ def _event_message_class_from_signature(
         else:
             fields[name] = (ann, Field(default=param.default))
     name = model_name or f"{func.__name__}Message"
-    model = create_model(name, __base__=EventMessage, **fields)
+    model = create_model(name, __base__=CommandMessage, **fields)
     module_name = getattr(func, "__module__", "__main__")
     model.__module__ = module_name
     # Register on the module so repr-based parsers can resolve the class by name
@@ -52,8 +52,8 @@ def _event_message_class_from_signature(
     return model
 
 
-class EventBusRegistryEntry(BaseModel):
-    """A single registry entry binding a message type to a handler class."""
+class CommandBusRouterEntry(BaseModel):
+    """A single router entry binding a message type to a handler class."""
 
     handler_class: type
     message_class: type
@@ -66,31 +66,31 @@ class EventBusRegistryEntry(BaseModel):
 
     def is_message_match(
         self,
-        message_instance_or_class: Union[EventMessage, type, str],
+        message_instance_or_class: Union[CommandMessage, type, str],
     ) -> bool:
         if isinstance(message_instance_or_class, str):
             return self.message_qual_name == message_instance_or_class
         return self.message_qual_name == get_qual_name(message_instance_or_class)
 
-    def handler_instance(self) -> EventMessageHandler:
+    def handler_instance(self) -> CommandHandler:
         """Return an instance of the handler."""
         return self.handler_class()
 
 
-class EventBusRegistry(EventBusRegistryInterface):
-    """Default in-memory registry of message types to handlers."""
+class CommandBusRouter(CommandBusRouterInterface):
+    """Default in-memory router of message types to handlers."""
 
     def __init__(
         self,
-        event_handlers: Optional[List[EventBusRegistryEntry]] = None,
+        command_handlers: Optional[List[CommandBusRouterEntry]] = None,
     ) -> None:
-        self.handlers: List[EventBusRegistryEntry] = event_handlers or []
+        self.handlers: List[CommandBusRouterEntry] = command_handlers or []
 
     def get_handlers_for_message(
         self,
-        message_class: Union[EventMessage, type],
-    ) -> List[EventBusRegistryEntry]:
-        """Return all registry entries that handle this message type."""
+        message_class: Union[CommandMessage, type],
+    ) -> List[CommandBusRouterEntry]:
+        """Return all router entries that handle this message type."""
         return [
             entry for entry in self.handlers if entry.is_message_match(message_class)
         ]
@@ -101,7 +101,7 @@ class EventBusRegistry(EventBusRegistryInterface):
         handler_class: type,
     ) -> None:
         """Register a handler for a message class."""
-        entry = EventBusRegistryEntry(
+        entry = CommandBusRouterEntry(
             message_class=message_class,
             handler_class=handler_class,
         )
@@ -114,7 +114,7 @@ class EventBusRegistry(EventBusRegistryInterface):
         handler_class: type,
     ) -> None:
         """Remove a handler registration."""
-        entry = EventBusRegistryEntry(
+        entry = CommandBusRouterEntry(
             message_class=message_class,
             handler_class=handler_class,
         )
@@ -123,40 +123,40 @@ class EventBusRegistry(EventBusRegistryInterface):
                 self.handlers.pop(i)
                 return
 
-    def event(self):
+    def command(self):
         """
-        Decorator that creates an EventMessage from the function's parameters,
+        Decorator that creates a CommandMessage from the function's parameters,
         registers a handler that calls the function when the message is dispatched,
         and returns a callable that builds the message instance. So you can do:
           bus.execute(on_order_created(order_id="x", amount_cents=10), wait=False)
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            message_class = _event_message_class_from_signature(func)
+            message_class = _command_message_class_from_signature(func)
             sig = inspect.signature(func)
             param_names = [name for name, p in sig.parameters.items() if name != "self"]
 
-            def process(self: Any, message: EventMessage) -> Any:
+            def process(self: Any, message: CommandMessage) -> Any:
                 dump = message.model_dump()
                 kwargs = {k: dump[k] for k in param_names if k in dump}
                 return func(**kwargs)
 
             handler_class = type(
                 f"{func.__name__}_Handler",
-                (EventMessageHandler,),
+                (CommandHandler,),
                 {"process": process},
             )
             self.register(message_class, handler_class)
 
             param_names = [name for name, p in sig.parameters.items() if name != "self"]
 
-            def message_factory(*args: Any, **kwargs: Any) -> EventMessage:
+            def message_factory(*args: Any, **kwargs: Any) -> CommandMessage:
                 # Map positional args to param names so message_class(**kwargs) works (Pydantic expects kwargs)
                 kwargs_from_args = dict(zip(param_names, args))
                 return message_class(**{**kwargs_from_args, **kwargs})
 
             message_factory.__name__ = func.__name__
-            message_factory._event_message_class = message_class  # type: ignore[attr-defined]
+            message_factory._command_message_class = message_class  # type: ignore[attr-defined]
             message_factory._handler_func = func  # type: ignore[attr-defined]
             return message_factory
 

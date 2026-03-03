@@ -10,18 +10,18 @@ class TransmissibleBaseModel(BaseModel):
         return self.__module__ + "." + repr(self)
 
 
-class EventMessage(TransmissibleBaseModel):
-    """Base for event payloads. Set correlation_id when using execute_and_wait for responses."""
+class CommandMessage(TransmissibleBaseModel):
+    """Base for command payloads. Set correlation_id when using execute_and_wait for responses."""
 
     correlation_id: Optional[str] = None
 
 
-class EventMessageHandler(ABC):
+class CommandHandler(ABC):
     @abstractmethod
-    def process(self, message: EventMessage) -> Union[Any, Coroutine[Any, Any, Any]]:
+    def process(self, message: CommandMessage) -> Union[Any, Coroutine[Any, Any, Any]]:
         pass
 
-    async def __call__(self, message: EventMessage) -> Any:
+    async def __call__(self, message: CommandMessage) -> Any:
         res = self.process(message=message)
         if iscoroutine(res):
             return await res
@@ -47,9 +47,9 @@ class ResponseStore(ABC):
         ...
 
 
-class EventBusAdapter(ABC):
+class CommandBusAdapter(ABC):
     @abstractmethod
-    def enqueue(self, message_instance: EventMessage, delay_seconds: int = 0) -> None:
+    def enqueue(self, message_instance: CommandMessage, delay_seconds: int = 0) -> None:
         pass
 
     @abstractmethod
@@ -61,45 +61,45 @@ class EventBusAdapter(ABC):
         pass
 
 
-class EventBusRegistryInterface(ABC):
+class CommandBusRouterInterface(ABC):
     @abstractmethod
     def get_handlers_for_message(
-        self, message_class: Union[EventMessage, Type[EventMessage]]
+        self, message_class: Union[CommandMessage, Type[CommandMessage]]
     ) -> List[Any]:
         pass
 
     @abstractmethod
     def register(
         self,
-        message_class: Type[EventMessage],
-        handler_class: Type[EventMessageHandler],
+        message_class: Type[CommandMessage],
+        handler_class: Type[CommandHandler],
     ) -> None:
         pass
 
     @abstractmethod
     def deregister(
         self,
-        message_class: Type[EventMessage],
-        handler_class: Type[EventMessageHandler],
+        message_class: Type[CommandMessage],
+        handler_class: Type[CommandHandler],
     ) -> None:
         pass
 
 
-class EventBusInterface(ABC):
+class CommandBusInterface(ABC):
     queue_name: str
-    registry: EventBusRegistryInterface
+    registry: CommandBusRouterInterface
 
     @abstractmethod
     async def execute(
         self,
-        message_instance: EventMessage,
+        message_instance: CommandMessage,
         delay_seconds: Optional[int] = None,
         wait: Optional[bool] = None,
         timeout_seconds: float = 30.0,
         poll_interval_seconds: float = 0.5,
         response_ttl_seconds: Optional[int] = None,
     ) -> Any:
-        """Enqueue event; when wait=True (default if response_store set), return handler result."""
+        """Enqueue command; when wait=True (default if response_store set), return handler result."""
         pass
 
     @abstractmethod

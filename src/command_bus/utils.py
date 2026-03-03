@@ -19,8 +19,8 @@ class ModuleImporter:
             if module_path == "__main__":
                 raise ImportError(
                     f"Cannot import '{module_path}'. This usually happens when "
-                    "using @registry.event() in a script run as __main__. "
-                    "Solution: Define your event handlers in a shared module "
+                    "using @router.command() in a script run as __main__. "
+                    "Solution: Define your command handlers in a shared module "
                     "and import them in both client and worker scripts. "
                     "See docs/client-and-worker.md for examples."
                 ) from e
@@ -36,7 +36,7 @@ class ModuleImporter:
                 raise AttributeError(
                     f"Class '{class_name}' not found in module '{self._module_path}'. "
                     "This usually happens when client and worker are separate scripts. "
-                    "Solution: Define event handlers in a shared module that both "
+                    "Solution: Define command handlers in a shared module that both "
                     "client and worker import. See docs/client-and-worker.md"
                 )
             raise AttributeError(

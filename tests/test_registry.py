@@ -1,23 +1,23 @@
-"""Tests for event_bus registry."""
+"""Tests for command_bus registry."""
 
 from typing import Optional
 
 import pytest
-from event_bus import (
-    EventBusRegistry,
-    EventBusRegistryEntry,
-    EventMessage,
-    EventMessageHandler,
+from command_bus import (
+    CommandBusRouter,
+    CommandBusRouterEntry,
+    CommandMessage,
+    CommandHandler,
     get_qual_name,
 )
 
 
-class SampleMessage(EventMessage):
+class SampleMessage(CommandMessage):
     value: int
 
 
-class SampleHandler(EventMessageHandler):
-    def process(self, message: EventMessage):
+class SampleHandler(CommandHandler):
+    def process(self, message: CommandMessage):
         return message.value
 
 
@@ -31,7 +31,7 @@ def test_get_qual_name_instance():
 
 
 def test_registry_register_and_get_handlers():
-    registry = EventBusRegistry()
+    registry = CommandBusRouter()
     registry.register(SampleMessage, SampleHandler)
     entries = registry.get_handlers_for_message(SampleMessage)
     assert len(entries) == 1
@@ -40,7 +40,7 @@ def test_registry_register_and_get_handlers():
 
 
 def test_registry_get_handlers_by_instance():
-    registry = EventBusRegistry()
+    registry = CommandBusRouter()
     registry.register(SampleMessage, SampleHandler)
     m = SampleMessage(value=2)
     entries = registry.get_handlers_for_message(m)
@@ -48,7 +48,7 @@ def test_registry_get_handlers_by_instance():
 
 
 def test_registry_deregister():
-    registry = EventBusRegistry()
+    registry = CommandBusRouter()
     registry.register(SampleMessage, SampleHandler)
     registry.deregister(SampleMessage, SampleHandler)
     entries = registry.get_handlers_for_message(SampleMessage)
@@ -56,7 +56,7 @@ def test_registry_deregister():
 
 
 def test_registry_entry_handler_instance():
-    entry = EventBusRegistryEntry(
+    entry = CommandBusRouterEntry(
         message_class=SampleMessage,
         handler_class=SampleHandler,
     )
@@ -65,7 +65,7 @@ def test_registry_entry_handler_instance():
 
 
 def test_registry_entry_is_message_match():
-    entry = EventBusRegistryEntry(
+    entry = CommandBusRouterEntry(
         message_class=SampleMessage,
         handler_class=SampleHandler,
     )
@@ -75,18 +75,18 @@ def test_registry_entry_is_message_match():
     assert entry.is_message_match("other.Module.OtherMessage") is False
 
 
-def test_registry_event_decorator_creates_message_from_params():
-    """@registry.event() creates EventMessage from function params; calling the decorator returns the message."""
-    registry = EventBusRegistry()
+def test_registry_command_decorator_creates_message_from_params():
+    """@router.command() creates CommandMessage from function params; calling the decorator returns the message."""
+    router = CommandBusRouter()
     received: list[dict] = []
 
-    @registry.event()
+    @router.command()
     def on_order_created(order_id: str, amount_cents: int):
         received.append({"order_id": order_id, "amount_cents": amount_cents})
 
-    assert hasattr(on_order_created, "_event_message_class")
-    assert on_order_created._event_message_class.__name__ == "on_order_createdMessage"
-    entries = registry.get_handlers_for_message(on_order_created._event_message_class)
+    assert hasattr(on_order_created, "_command_message_class")
+    assert on_order_created._command_message_class.__name__ == "on_order_createdMessage"
+    entries = router.get_handlers_for_message(on_order_created._command_message_class)
     assert len(entries) == 1
     handler = entries[0].handler_instance()
     msg = on_order_created(
@@ -96,36 +96,36 @@ def test_registry_event_decorator_creates_message_from_params():
     assert received == [{"order_id": "ord-1", "amount_cents": 1000}]
 
 
-def test_registry_event_decorator_returns_message_factory():
+def test_registry_command_decorator_returns_message_factory():
     """Decorator returns a callable that builds the message; call it and pass to handler."""
-    registry = EventBusRegistry()
+    router = CommandBusRouter()
 
-    @registry.event()
+    @router.command()
     def my_handler(x: int) -> int:
         return x + 1
 
     # Calling the decorator returns the message instance (prefilled)
     msg = my_handler(10)
     assert msg.x == 10
-    handler_inst = registry.get_handlers_for_message(my_handler._event_message_class)[
+    handler_inst = router.get_handlers_for_message(my_handler._command_message_class)[
         0
     ].handler_instance()
     assert handler_inst.process(msg) == 11
 
 
 @pytest.mark.asyncio
-async def test_registry_event_decorator_async_handler():
-    """@registry.event() works with async functions; handler.__call__ awaits process()."""
-    registry = EventBusRegistry()
+async def test_registry_command_decorator_async_handler():
+    """@router.command() works with async functions; handler.__call__ awaits process()."""
+    router = CommandBusRouter()
     received: list[str] = []
 
-    @registry.event()
+    @router.command()
     async def on_created(name: str) -> str:
         received.append(name)
         return f"ok:{name}"
 
     msg = on_created(name="test")  # returns message instance
-    entries = registry.get_handlers_for_message(on_created._event_message_class)
+    entries = router.get_handlers_for_message(on_created._command_message_class)
     assert len(entries) == 1
     handler = entries[0].handler_instance()
     result = await handler(msg)
@@ -133,15 +133,15 @@ async def test_registry_event_decorator_async_handler():
     assert received == ["test"]
 
 
-def test_registry_event_decorator_optional_and_default_params():
+def test_registry_command_decorator_optional_and_default_params():
     """Generated message supports Optional and default parameter values."""
-    registry = EventBusRegistry()
+    router = CommandBusRouter()
 
-    @registry.event()
+    @router.command()
     def handle(tag: str, count: int = 0, extra: Optional[str] = None) -> str:
         return f"{tag}:{count}:{extra!r}"
 
-    handler = registry.get_handlers_for_message(handle._event_message_class)[
+    handler = router.get_handlers_for_message(handle._command_message_class)[
         0
     ].handler_instance()
     msg1 = handle(tag="a")

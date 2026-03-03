@@ -3,16 +3,16 @@
 import ast
 from typing import Any, Dict, List, Tuple
 
-from ..interfaces import EventMessage
+from ..interfaces import CommandMessage
 from ..utils import ModuleImporter
 from .base import MessageParserBase
 
 
 class ReprMessageParser(MessageParserBase):
     """
-    Parses event message strings in the form:
+    Parses command message strings in the form:
     mymodule.MyMessage(1, x=2)
-    into EventMessage instances.
+    into CommandMessage instances.
     """
 
     def __init__(self, message_string: str) -> None:
@@ -41,7 +41,7 @@ class ReprMessageParser(MessageParserBase):
         module_path = ".".join(module_parts)
         return module_path, class_name, param_string
 
-    def initialize(self) -> EventMessage:
+    def initialize(self) -> CommandMessage:
         """Create an instance of the message class with its parameters."""
         args, kwargs = self.parse_args(self.param_string)
         return self.module_importer.get_class(self.class_name)(*args, **kwargs)

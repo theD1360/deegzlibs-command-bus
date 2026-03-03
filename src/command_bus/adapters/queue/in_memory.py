@@ -1,9 +1,9 @@
-"""In-memory event bus adapter for tests or in-process use."""
+"""In-memory command bus adapter for tests or in-process use."""
 
 from collections import deque
 from typing import Any, List
 
-from ...interfaces import EventBusAdapter, EventMessage
+from ...interfaces import CommandBusAdapter, CommandMessage
 
 
 class _InMemoryMessage:
@@ -19,9 +19,9 @@ class _InMemoryMessage:
         pass
 
 
-class InMemoryEventBusAdapter(EventBusAdapter):
+class InMemoryCommandBusAdapter(CommandBusAdapter):
     """
-    In-memory FIFO queue adapter. Useful for tests or single-process event dispatch.
+    In-memory FIFO queue adapter. Useful for tests or single-process command dispatch.
     delay_seconds is ignored (no native delay); messages are available immediately.
     """
 
@@ -31,7 +31,7 @@ class InMemoryEventBusAdapter(EventBusAdapter):
 
     def enqueue(
         self,
-        message_instance: EventMessage,
+        message_instance: CommandMessage,
         delay_seconds: int = 0,
     ) -> None:
         """Append message to the queue. delay_seconds is ignored."""
