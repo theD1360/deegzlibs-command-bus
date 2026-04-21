@@ -8,6 +8,8 @@ pip install deegzlibs-command-bus
 
 This gives you the command bus, in-memory queue adapter, in-memory response store, and repr/JSON/Base64 parsers.
 
+It also installs the **`command-bus-worker`** console script for running queue consumers as separate OS processes. See [Worker CLI](cli.md).
+
 ## Optional extras
 
 | Extra | Use case |

@@ -83,6 +83,16 @@ if __name__ == "__main__":
     asyncio.run(run_worker())
 ```
 
+## Built-in worker CLI
+
+For production-style deployments you can skip the hand-written loop and use the **`command-bus-worker`** entry point (installed with the package). Pass a **target** `module:attribute` (like uvicorn): the attribute must be a **`CommandBus`** or **`CommandBusGroup`**. Omit **`:attribute`** to use **`bus`**. The CLI spawns **`--workers`** processes per bus (or uses the group’s `WorkerConfig`); each child imports the module and runs `work()` in its own interpreter so CPU-bound handlers are not limited by a single GIL.
+
+```bash
+command-bus-worker myapp.worker:bus --workers 4 -v
+```
+
+For **several buses in one process tree**, expose a **`CommandBusGroup`** and run e.g. **`command-bus-worker myapp.worker:command_bus_group`**. See [Worker CLI](cli.md).
+
 ## Shutdown
 
 For adapters that hold a connection (e.g. RabbitMQ), you can close it when shutting down the worker:

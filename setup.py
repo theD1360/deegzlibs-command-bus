@@ -30,6 +30,11 @@ setup(
     install_requires=[
         "pydantic>=2.0",
     ],
+    entry_points={
+        "console_scripts": [
+            "command-bus-worker=command_bus.cli:main",
+        ],
+    },
     extras_require={
         "sqs": ["boto3"],
         "rabbitmq": ["pika>=1.0"],

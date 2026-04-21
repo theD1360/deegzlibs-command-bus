@@ -24,6 +24,13 @@ Maps message types to handler classes.
 - **`get_handlers_for_message(message_class_or_instance)`** – Return matching router entries.
 - **`command()`** – Decorator: build CommandMessage from a function's signature, register a handler, return a message factory. See [Handler decorator](handler-decorator.md).
 
+### WorkerConfig / CommandBusGroup
+
+Declarative layout for the [Worker CLI](cli.md) when you want **several `CommandBus` instances** in one supervised process tree. Point the CLI at **`module:attribute`** where `attribute` is the `CommandBusGroup` (e.g. `myapp.worker:command_bus_group`).
+
+- **`WorkerConfig(bus, workers=None)`** – **`bus`** is the `CommandBus` instance. If **`workers`** is `None`, the CLI **`--workers`** value applies to that entry. Each bus must also be stored on a **top-level attribute** of the worker module so the CLI can resolve a name for subprocesses (**`resolve_bus_attr_on_module(module, bus)`**).
+- **`CommandBusGroup(*WorkerConfig)`** – At least one config. **`validate(module)`** checks each bus is a `CommandBus` and bound on `module`. **`iter_jobs(module, default_workers)`** returns the `(bus_attr, worker_index)` list used to spawn processes.
+
 ### CommandBus
 
 Generic bus: coordinates a queue adapter and router. **`execute()`** is async.
@@ -33,6 +40,8 @@ Generic bus: coordinates a queue adapter and router. **`execute()`** is async.
 - **`await execute_and_wait(message_instance, timeout_seconds=30, ...)`** – Convenience for `execute(..., wait=True)`.
 - **`await dispatch(raw_message: str)`** – Parse the raw message and run all registered handlers (used internally by `work()`).
 - **`await work()`** – Poll the queue and dispatch each message.
+
+For running **`work()`** in multiple OS processes from the shell, see [Worker CLI](cli.md) (`command-bus-worker`).
 
 ### get_qual_name(obj)
 
