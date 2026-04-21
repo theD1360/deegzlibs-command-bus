@@ -31,6 +31,8 @@ await bus.execute(on_order_created(order_id="ord-1", amount_cents=1999), wait=Fa
 await bus.work()
 ```
 
+To run workers as **separate OS processes** (useful when handlers do a lot of CPU work), use the built-in CLI, e.g. **`command-bus-worker myapp.worker:bus --workers 4`** (omit **`:bus`** if your bus lives on attribute **`bus`**). For several queues in one supervised tree, point at a **`CommandBusGroup`**, e.g. **`myapp.worker:command_bus_group`** (see [Worker CLI](docs/cli.md)).
+
 For full examples (messages, handlers, SQS/Redis, execute-and-wait), see the [documentation](docs/index.md).
 
 ## Documentation
@@ -42,6 +44,7 @@ For full examples (messages, handlers, SQS/Redis, execute-and-wait), see the [do
 | [Handler decorator](docs/handler-decorator.md) | `@router.command()` and message factory. |
 | [Message formats and parsers](docs/message-formats-and-parsers.md) | Repr, JSON, Base64, custom parser. |
 | [Client and worker](docs/client-and-worker.md) | Shared module, producer, consumer. |
+| [Worker CLI](docs/cli.md) | `command-bus-worker module[:attr]` — `CommandBus` or `CommandBusGroup`, fork/spawn. |
 | [Queue adapters](docs/queue-adapters.md) | In-memory, SQS, RabbitMQ, Redis. |
 | [Execute and wait](docs/execute-and-wait.md) | Response store, request/response. |
 | [API reference](docs/api-reference.md) | Types and methods overview. |

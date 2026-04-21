@@ -64,4 +64,5 @@ for entry in router.get_handlers_for_message(command):
 
 - Use the **[handler decorator](handler-decorator.md)** to avoid defining a message class and get a message factory: `bus.execute(on_order_created(order_id=1, amount_cents=10), wait=False)`.
 - Configure a **[queue adapter](queue-adapters.md)** (SQS, Redis, RabbitMQ) and a **[client/worker](client-and-worker.md)** setup.
+- Run consumers with the **[Worker CLI](cli.md)** (e.g. `command-bus-worker myapp.worker:bus --workers 4`) for multi-process `work()` loops.
 - Use **[execute and wait](execute-and-wait.md)** with a response store to get the handler result back.
