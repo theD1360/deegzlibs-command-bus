@@ -1,4 +1,5 @@
 # Publishes to PyPI when a version tag is pushed (e.g. v1.2.3 from Commitizen bump workflow).
+# Also supports manual re-runs via workflow_dispatch.
 #
 # Repository secret (Settings → Secrets → Actions):
 #   PYPI_API_TOKEN — PyPI API token; use username __token__ style (paste full pypi-... token).
@@ -9,6 +10,12 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing git tag to publish (e.g. v2.1.0). Leave empty to publish HEAD."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -18,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -33,6 +42,15 @@ jobs:
 
       - name: Check metadata
         run: twine check dist/*
+
+      - name: Require PYPI_API_TOKEN
+        env:
+          TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "Missing repository secret PYPI_API_TOKEN. Add it under Settings → Secrets → Actions."
+            exit 1
+          fi
 
       - name: Upload to PyPI
         env:

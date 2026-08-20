@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="deegzlibs-command-bus",
-    version="1.3.0",
+    version="2.1.0",
     author="Diego Alejos",
     author_email="lego.admin@gmail.com",
     description="A small command bus with pluggable queue adapters (e.g. AWS SQS)",
