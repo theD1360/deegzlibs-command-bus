@@ -6,7 +6,13 @@ from typing import Any, Callable, List, Optional, Union, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
-from .interfaces import CommandBusRouterInterface, CommandMessage, CommandHandler
+from .interfaces import (
+    CommandBusRouterInterface,
+    CommandHandler,
+    CommandMessage,
+    EventMessage,
+    TransmissibleBaseModel,
+)
 
 
 def get_qual_name(obj: Union[type, object]) -> str:
@@ -16,11 +22,12 @@ def get_qual_name(obj: Union[type, object]) -> str:
     return type(obj).__module__ + "." + type(obj).__name__
 
 
-def _command_message_class_from_signature(
+def _message_class_from_signature(
     func: Callable[..., Any],
+    base: type = CommandMessage,
     model_name: Optional[str] = None,
 ) -> type:
-    """Build a CommandMessage subclass whose fields match the function's parameters."""
+    """Build a message subclass (CommandMessage or EventMessage) from function parameters."""
     sig = inspect.signature(func)
     try:
         hints = get_type_hints(func)
@@ -36,7 +43,7 @@ def _command_message_class_from_signature(
         else:
             fields[name] = (ann, Field(default=param.default))
     name = model_name or f"{func.__name__}Message"
-    model = create_model(name, __base__=CommandMessage, **fields)
+    model = create_model(name, __base__=base, **fields)
     module_name = getattr(func, "__module__", "__main__")
     model.__module__ = module_name
     # Register on the module so repr-based parsers can resolve the class by name
@@ -50,6 +57,14 @@ def _command_message_class_from_signature(
             if not hasattr(main_module, name):
                 setattr(main_module, name, model)
     return model
+
+
+def _command_message_class_from_signature(
+    func: Callable[..., Any],
+    model_name: Optional[str] = None,
+) -> type:
+    """Build a CommandMessage subclass whose fields match the function's parameters."""
+    return _message_class_from_signature(func, base=CommandMessage, model_name=model_name)
 
 
 class CommandBusRouterEntry(BaseModel):
@@ -66,7 +81,7 @@ class CommandBusRouterEntry(BaseModel):
 
     def is_message_match(
         self,
-        message_instance_or_class: Union[CommandMessage, type, str],
+        message_instance_or_class: Union[TransmissibleBaseModel, type, str],
     ) -> bool:
         if isinstance(message_instance_or_class, str):
             return self.message_qual_name == message_instance_or_class
@@ -88,7 +103,7 @@ class CommandBusRouter(CommandBusRouterInterface):
 
     def get_handlers_for_message(
         self,
-        message_class: Union[CommandMessage, type],
+        message_class: Union[TransmissibleBaseModel, type],
     ) -> List[CommandBusRouterEntry]:
         """Return all router entries that handle this message type."""
         return [
@@ -123,20 +138,15 @@ class CommandBusRouter(CommandBusRouterInterface):
                 self.handlers.pop(i)
                 return
 
-    def command(self):
-        """
-        Decorator that creates a CommandMessage from the function's parameters,
-        registers a handler that calls the function when the message is dispatched,
-        and returns a callable that builds the message instance. So you can do:
-          bus.execute(on_order_created(order_id="x", amount_cents=10), wait=False)
-        """
+    def _handler_decorator(self, base: type):
+        """Shared decorator factory for command() and event()."""
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            message_class = _command_message_class_from_signature(func)
+            message_class = _message_class_from_signature(func, base=base)
             sig = inspect.signature(func)
             param_names = [name for name, p in sig.parameters.items() if name != "self"]
 
-            def process(self: Any, message: CommandMessage) -> Any:
+            def process(self: Any, message: TransmissibleBaseModel) -> Any:
                 dump = message.model_dump()
                 kwargs = {k: dump[k] for k in param_names if k in dump}
                 return func(**kwargs)
@@ -148,10 +158,8 @@ class CommandBusRouter(CommandBusRouterInterface):
             )
             self.register(message_class, handler_class)
 
-            param_names = [name for name, p in sig.parameters.items() if name != "self"]
-
-            def message_factory(*args: Any, **kwargs: Any) -> CommandMessage:
-                # Map positional args to param names so message_class(**kwargs) works (Pydantic expects kwargs)
+            def message_factory(*args: Any, **kwargs: Any) -> TransmissibleBaseModel:
+                # Map positional args to param names so message_class(**kwargs) works
                 kwargs_from_args = dict(zip(param_names, args))
                 return message_class(**{**kwargs_from_args, **kwargs})
 
@@ -161,3 +169,20 @@ class CommandBusRouter(CommandBusRouterInterface):
             return message_factory
 
         return decorator
+
+    def command(self):
+        """
+        Decorator that creates a CommandMessage from the function's parameters,
+        registers a handler that calls the function when the message is dispatched,
+        and returns a callable that builds the message instance. So you can do:
+          bus.execute(on_order_created(order_id="x", amount_cents=10), wait=False)
+        """
+        return self._handler_decorator(CommandMessage)
+
+    def event(self):
+        """
+        Decorator that creates an EventMessage from the function's parameters,
+        registers a handler for pub/sub dispatch, and returns a message factory:
+          await event_bus.publish(on_order_created(order_id="x", amount_cents=10))
+        """
+        return self._handler_decorator(EventMessage)

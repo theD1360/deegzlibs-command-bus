@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from .bus import CommandBus
+from .event_bus import EventBus
+
+BusInstance = Union[CommandBus, EventBus]
 
 
-def resolve_bus_attr_on_module(module: object, bus: CommandBus) -> str:
+def resolve_bus_attr_on_module(module: object, bus: BusInstance) -> str:
     """
     Find the module-level attribute name that refers to ``bus`` (identity match).
 
@@ -20,7 +23,7 @@ def resolve_bus_attr_on_module(module: object, bus: CommandBus) -> str:
     names = sorted(k for k, v in vars(module).items() if v is bus)
     if not names:
         raise SystemExit(
-            "Each CommandBus in a CommandBusGroup must be assigned to a module-level "
+            "Each bus in a CommandBusGroup must be assigned to a module-level "
             "attribute on the worker module (so the CLI can spawn workers that re-import "
             f"the bus by name). No attribute on {getattr(module, '__name__', module)!r} "
             f"refers to this bus instance: {bus!r}"
@@ -31,7 +34,7 @@ def resolve_bus_attr_on_module(module: object, bus: CommandBus) -> str:
 @dataclass(frozen=True)
 class WorkerConfig:
     """
-    One ``CommandBus`` and how many OS worker processes should consume it.
+    One ``CommandBus`` or ``EventBus`` and how many OS worker processes should consume it.
 
     Pass the **bus instance** you already constructed. The worker CLI resolves the
     module attribute name for each bus (same object identity on the worker module) so
@@ -44,27 +47,28 @@ class WorkerConfig:
     resources opened before forking (see worker CLI docs).
     """
 
-    bus: CommandBus
+    bus: BusInstance
     workers: Optional[int] = None
 
 
 class CommandBusGroup:
     """
-    Code-controlled layout for running several ``CommandBus`` instances in one CLI process tree.
+    Code-controlled layout for running several ``CommandBus`` / ``EventBus`` instances
+    in one CLI process tree.
 
     Each entry is a :class:`WorkerConfig` (``bus`` + optional ``workers``). Point the
     worker CLI at ``myapp.worker:command_bus_group`` (or any ``module:attribute`` whose value
     is this group). Otherwise use ``module:bus`` (or ``module`` alone, which defaults the
-    attribute to ``bus``) for a single ``CommandBus``.
+    attribute to ``bus``) for a single bus.
 
     Example::
 
         orders_bus = CommandBus(...)
-        priority_bus = CommandBus(...)
+        events_bus = EventBus(...)
 
         command_bus_group = CommandBusGroup(
             WorkerConfig(orders_bus, workers=4),
-            WorkerConfig(priority_bus, workers=2),
+            WorkerConfig(events_bus, workers=2),
         )
     """
 
@@ -78,11 +82,12 @@ class CommandBusGroup:
         return self._configs
 
     def validate(self, module: object) -> None:
-        """Ensure each bus is a ``CommandBus`` and bound to a module-level attribute."""
+        """Ensure each bus is a CommandBus or EventBus and bound to a module-level attribute."""
         for c in self._configs:
-            if not isinstance(c.bus, CommandBus):
+            if not isinstance(c.bus, (CommandBus, EventBus)):
                 raise SystemExit(
-                    f"WorkerConfig.bus must be a CommandBus (got {type(c.bus).__name__})"
+                    f"WorkerConfig.bus must be a CommandBus or EventBus "
+                    f"(got {type(c.bus).__name__})"
                 )
             resolve_bus_attr_on_module(module, c.bus)
 

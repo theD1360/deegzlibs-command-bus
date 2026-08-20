@@ -11,9 +11,13 @@ Base class for command payloads (Pydantic `BaseModel`). Subclass it to define yo
 - **`correlation_id: Optional[str] = None`** – Set by the bus when using `execute_and_wait`. The worker's handler return value is stored under this key in the response store.
 - **`str(message)`** – Returns the serialized form used when enqueueing (e.g. repr-style for the default parser).
 
+### EventMessage
+
+Base class for pub/sub event payloads. Fire-and-forget; no response-store semantics. See [Pub/sub events](pubsub-events.md).
+
 ### CommandHandler
 
-Abstract handler. Subclass and implement **`process(self, message: CommandMessage)`**. Can return anything (sync or async). The return value is used when the bus has a response store and the message has a `correlation_id`.
+Abstract handler. Subclass and implement **`process(self, message)`**. Can return anything (sync or async). The return value is used when the bus has a response store and the message has a `correlation_id`.
 
 ### CommandBusRouter
 
@@ -23,13 +27,14 @@ Maps message types to handler classes.
 - **`deregister(message_class, handler_class)`** – Remove a registration.
 - **`get_handlers_for_message(message_class_or_instance)`** – Return matching router entries.
 - **`command()`** – Decorator: build CommandMessage from a function's signature, register a handler, return a message factory. See [Handler decorator](handler-decorator.md).
+- **`event()`** – Same pattern for EventMessage / EventBus.publish. See [Pub/sub events](pubsub-events.md).
 
 ### WorkerConfig / CommandBusGroup
 
-Declarative layout for the [Worker CLI](cli.md) when you want **several `CommandBus` instances** in one supervised process tree. Point the CLI at **`module:attribute`** where `attribute` is the `CommandBusGroup` (e.g. `myapp.worker:command_bus_group`).
+Declarative layout for the [Worker CLI](cli.md) when you want **several `CommandBus` or `EventBus` instances** in one supervised process tree. Point the CLI at **`module:attribute`** where `attribute` is the `CommandBusGroup` (e.g. `myapp.worker:command_bus_group`).
 
-- **`WorkerConfig(bus, workers=None)`** – **`bus`** is the `CommandBus` instance. If **`workers`** is `None`, the CLI **`--workers`** value applies to that entry. Each bus must also be stored on a **top-level attribute** of the worker module so the CLI can resolve a name for subprocesses (**`resolve_bus_attr_on_module(module, bus)`**).
-- **`CommandBusGroup(*WorkerConfig)`** – At least one config. **`validate(module)`** checks each bus is a `CommandBus` and bound on `module`. **`iter_jobs(module, default_workers)`** returns the `(bus_attr, worker_index)` list used to spawn processes.
+- **`WorkerConfig(bus, workers=None)`** – **`bus`** is a `CommandBus` or `EventBus`. If **`workers`** is `None`, the CLI **`--workers`** value applies to that entry. Each bus must also be stored on a **top-level attribute** of the worker module so the CLI can resolve a name for subprocesses (**`resolve_bus_attr_on_module(module, bus)`**).
+- **`CommandBusGroup(*WorkerConfig)`** – At least one config. **`validate(module)`** checks each bus and binding. **`iter_jobs(module, default_workers)`** returns the `(bus_attr, worker_index)` list used to spawn processes.
 
 ### CommandBus
 
@@ -42,6 +47,16 @@ Generic bus: coordinates a queue adapter and router. **`execute()`** is async.
 - **`await work()`** – Poll the queue and dispatch each message.
 
 For running **`work()`** in multiple OS processes from the shell, see [Worker CLI](cli.md) (`command-bus-worker`).
+
+### EventBus
+
+Pub/sub bus: coordinates a fan-out adapter and router. **`publish()`** is async.
+
+- **`__init__(queue_adapter, command_router=None, message_parser_class=None)`**
+- **`await publish(message_instance, delay_seconds=None)`** – Broadcast to all subscribers (no local handler required).
+- **`await dispatch(raw_message)`** / **`await work()`** – Same consumer loop as CommandBus; missing handlers are a no-op.
+
+See [Pub/sub events](pubsub-events.md).
 
 ### get_qual_name(obj)
 
@@ -64,6 +79,9 @@ Implement **`enqueue(message_instance, delay_seconds=0)`**, **`dequeue(message_i
 - **SqsCommandBusAdapter** – AWS SQS. Extra: `[sqs]`.
 - **RabbitMqCommandBusAdapter** – RabbitMQ. Extra: `[rabbitmq]`.
 - **RedisCommandBusAdapter** – Redis Lists. Extra: `[redis]`.
+- **InMemoryPubSubAdapter** – In-memory fan-out.
+- **RedisPubSubAdapter** – Redis Pub/Sub. Extra: `[redis]`.
+- **RabbitMqFanoutAdapter** – RabbitMQ fanout exchange. Extra: `[rabbitmq]`.
 
 ## Response store (ResponseStore)
 
@@ -75,6 +93,7 @@ Implement **`set(key, value, ttl_seconds=60)`**, **`get(key)`**, **`delete(key)`
 ## Interfaces
 
 - **CommandBusAdapter** – Abstract queue contract.
-- **CommandBusInterface** – Abstract bus contract.
+- **CommandBusInterface** – Abstract command bus contract.
+- **EventBusInterface** – Abstract event bus contract.
 - **CommandBusRouterInterface** – Abstract router contract.
 - **ResponseStore** – Abstract response store contract.

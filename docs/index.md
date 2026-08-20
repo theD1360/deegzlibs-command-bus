@@ -13,6 +13,7 @@ A small command bus with pluggable queue adapters. Define command messages as Py
 | [Client and worker](client-and-worker.md) | Shared bus factory, producer client, and consumer worker. |
 | [Worker CLI](cli.md) | `command-bus-worker module[:attr]`: `CommandBus` or `CommandBusGroup`, fork on POSIX. |
 | [Queue adapters](queue-adapters.md) | In-memory, SQS, RabbitMQ, and Redis adapters. |
+| [Pub/sub events](pubsub-events.md) | `EventBus`, fan-out adapters, `@router.event()`. |
 | [Execute and wait](execute-and-wait.md) | Unified `execute()` API, response store, and request/response. |
 | [API reference](api-reference.md) | Overview of public types and methods. |
 

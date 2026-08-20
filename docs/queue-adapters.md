@@ -78,3 +78,13 @@ Constructor: **`RedisCommandBusAdapter(redis_client, queue_name: str)`**.
 
 - **`delay_seconds`** is not supported (Redis List has no native delay).
 - Messages are removed when popped; failed handlers do not automatically requeue.
+
+---
+
+## Fan-out (pub/sub)
+
+For **broadcast** (every worker gets a copy), use the event bus and fan-out adapters instead of the work-queue adapters above. See [Pub/sub events](pubsub-events.md).
+
+- **`InMemoryPubSubAdapter`** – in-process fan-out.
+- **`RedisPubSubAdapter`** – Redis PUBLISH/SUBSCRIBE (`[redis]`).
+- **`RabbitMqFanoutAdapter`** – RabbitMQ fanout exchange (`[rabbitmq]`).

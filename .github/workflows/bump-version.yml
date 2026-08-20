@@ -1,0 +1,78 @@
+# Run manually after merging to the default branch when you want a new release.
+# Commitizen bumps versions (see [tool.commitizen] version_files), commits, and tags vX.Y.Z.
+# That tag push triggers publish-pypi.yml.
+#
+# Requires conventional commits since the last tag. If the default branch is protected,
+# grant workflows permission to push (Settings → Actions → General → Workflow permissions),
+# or add a PAT with contents:write as repo secret CZ_GIT_TOKEN and uncomment checkout token below.
+
+name: Bump version (Commitizen)
+
+on:
+  workflow_dispatch:
+    inputs:
+      increment:
+        description: "How to bump (auto = infer from conventional commits since last tag)"
+        type: choice
+        required: true
+        default: auto
+        options:
+          - auto
+          - PATCH
+          - MINOR
+          - MAJOR
+      dry_run:
+        description: "If true, only run cz bump --dry-run (no commit, tag, or push)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bump-version
+  cancel-in-progress: true
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for Commitizen)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # token: ${{ secrets.CZ_GIT_TOKEN }}  # uncomment if default GITHUB_TOKEN cannot push to main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Commitizen
+        run: pip install "commitizen>=3.0"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Dry run (no changes)
+        if: ${{ inputs.dry_run }}
+        run: |
+          if [ "${{ inputs.increment }}" = "auto" ]; then
+            cz bump --dry-run --yes
+          else
+            cz bump --dry-run --yes --increment "${{ inputs.increment }}"
+          fi
+
+      - name: Bump version and create tag
+        if: ${{ !inputs.dry_run }}
+        run: |
+          if [ "${{ inputs.increment }}" = "auto" ]; then
+            cz bump --yes
+          else
+            cz bump --yes --increment "${{ inputs.increment }}"
+          fi
+
+      - name: Push commit and tags
+        if: ${{ !inputs.dry_run }}
+        run: git push origin "HEAD:${{ github.ref_name }}" --follow-tags

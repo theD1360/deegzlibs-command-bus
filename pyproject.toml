@@ -35,7 +35,7 @@ version = "1.2.0"
 description = "A small command bus with pluggable queue adapters and response stores (e.g. SQS, RabbitMQ, Redis, etc.)"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Diego Alejos", email = "lego.admin@gmail.com"}
 ]
@@ -56,10 +56,14 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Distributed Computing",
 ]
+
+[project.scripts]
+command-bus-worker = "command_bus.cli:main"
+
 [project.urls]
-Homepage = "https://github.com/theD1360/deegzlibs-event-bus"
-Repository = "https://github.com/theD1360/deegzlibs-event-bus"
-Issues = "https://github.com/theD1360/deegzlibs-event-bus/issues"
+Homepage = "https://github.com/deegzlibs/deegzlibs-command-bus"
+Repository = "https://github.com/deegzlibs/deegzlibs-command-bus"
+Issues = "https://github.com/deegzlibs/deegzlibs-command-bus/issues"
 
 [project.optional-dependencies]
 sqs = ["boto3"]
@@ -75,5 +79,6 @@ name = "cz_conventional_commits"
 version = "1.2.0"
 tag_format = "v$version"
 version_files = [
-    "pyproject.toml:version"
+    "pyproject.toml:version",
+    "setup.py:version",
 ]

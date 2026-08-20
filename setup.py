@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="deegzlibs-command-bus",
-    version="1.0.0",
+    version="1.2.0",
     author="Diego Alejos",
     author_email="lego.admin@gmail.com",
     description="A small command bus with pluggable queue adapters (e.g. AWS SQS)",
@@ -30,11 +30,6 @@ setup(
     install_requires=[
         "pydantic>=2.0",
     ],
-    entry_points={
-        "console_scripts": [
-            "command-bus-worker=command_bus.cli:main",
-        ],
-    },
     extras_require={
         "sqs": ["boto3"],
         "rabbitmq": ["pika>=1.0"],

@@ -27,6 +27,17 @@ def test_command_message_is_pydantic_model():
     assert e.id == "abc"
 
 
+def test_event_message_is_pydantic_model():
+    from command_bus import EventMessage
+
+    class E(EventMessage):
+        id: str
+
+    e = E(id="abc")
+    assert e.id == "abc"
+    assert not hasattr(e, "correlation_id") or "correlation_id" not in E.model_fields
+
+
 def test_command_handler_abstract():
     """CommandHandler cannot be instantiated without process()."""
     with pytest.raises(TypeError):

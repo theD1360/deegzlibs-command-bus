@@ -4,12 +4,15 @@ DeegzLibs CommandBus: a small command bus with pluggable queue adapters (e.g. SQ
 
 from .bus import CommandBus
 from .command_bus_group import CommandBusGroup, WorkerConfig, resolve_bus_attr_on_module
+from .event_bus import EventBus
 from .interfaces import (
     CommandBusAdapter,
     CommandBusInterface,
     CommandBusRouterInterface,
     CommandMessage,
     CommandHandler,
+    EventBusInterface,
+    EventMessage,
     ResponseStore,
     TransmissibleBaseModel,
 )
@@ -34,6 +37,9 @@ __all__ = [
     "CommandBusRouterInterface",
     "CommandMessage",
     "CommandHandler",
+    "EventBus",
+    "EventBusInterface",
+    "EventMessage",
     "JsonMessageParser",
     "MessageParser",
     "MessageParserBase",

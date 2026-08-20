@@ -16,12 +16,18 @@ class CommandMessage(TransmissibleBaseModel):
     correlation_id: Optional[str] = None
 
 
+class EventMessage(TransmissibleBaseModel):
+    """Base for pub/sub event payloads. Fire-and-forget; no response-store semantics."""
+
+
 class CommandHandler(ABC):
     @abstractmethod
-    def process(self, message: CommandMessage) -> Union[Any, Coroutine[Any, Any, Any]]:
+    def process(
+        self, message: TransmissibleBaseModel
+    ) -> Union[Any, Coroutine[Any, Any, Any]]:
         pass
 
-    async def __call__(self, message: CommandMessage) -> Any:
+    async def __call__(self, message: TransmissibleBaseModel) -> Any:
         res = self.process(message=message)
         if iscoroutine(res):
             return await res
@@ -49,7 +55,9 @@ class ResponseStore(ABC):
 
 class CommandBusAdapter(ABC):
     @abstractmethod
-    def enqueue(self, message_instance: CommandMessage, delay_seconds: int = 0) -> None:
+    def enqueue(
+        self, message_instance: TransmissibleBaseModel, delay_seconds: int = 0
+    ) -> None:
         pass
 
     @abstractmethod
@@ -64,14 +72,15 @@ class CommandBusAdapter(ABC):
 class CommandBusRouterInterface(ABC):
     @abstractmethod
     def get_handlers_for_message(
-        self, message_class: Union[CommandMessage, Type[CommandMessage]]
+        self,
+        message_class: Union[TransmissibleBaseModel, Type[TransmissibleBaseModel]],
     ) -> List[Any]:
         pass
 
     @abstractmethod
     def register(
         self,
-        message_class: Type[CommandMessage],
+        message_class: Type[TransmissibleBaseModel],
         handler_class: Type[CommandHandler],
     ) -> None:
         pass
@@ -79,7 +88,7 @@ class CommandBusRouterInterface(ABC):
     @abstractmethod
     def deregister(
         self,
-        message_class: Type[CommandMessage],
+        message_class: Type[TransmissibleBaseModel],
         handler_class: Type[CommandHandler],
     ) -> None:
         pass
@@ -100,6 +109,29 @@ class CommandBusInterface(ABC):
         response_ttl_seconds: Optional[int] = None,
     ) -> Any:
         """Enqueue command; when wait=True (default if response_store set), return handler result."""
+        pass
+
+    @abstractmethod
+    async def dispatch(self, message_string: str) -> None:
+        pass
+
+    @abstractmethod
+    async def work(self) -> None:
+        pass
+
+
+class EventBusInterface(ABC):
+    """Pub/sub event bus: publish fans out; workers poll and dispatch."""
+
+    registry: CommandBusRouterInterface
+
+    @abstractmethod
+    async def publish(
+        self,
+        message_instance: EventMessage,
+        delay_seconds: Optional[int] = None,
+    ) -> None:
+        """Publish an event to all subscribers (fire-and-forget)."""
         pass
 
     @abstractmethod

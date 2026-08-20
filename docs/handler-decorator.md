@@ -35,6 +35,10 @@ result = await bus.execute(on_order_created(order_id="ord-2", amount_cents=500))
 await bus.work()
 ```
 
+## Events (`@router.event()`)
+
+Same pattern for pub/sub: builds an **EventMessage**, registers a handler, and returns a factory for **`EventBus.publish(...)`**. See [Pub/sub events](pubsub-events.md).
+
 ## Behaviour
 
 - **Message factory:** After decoration, `on_order_created` is no longer the original function. Calling `on_order_created(order_id="x", amount_cents=100)` returns an instance of the generated message class (e.g. `on_order_createdMessage`), which you pass to `bus.execute(...)`.

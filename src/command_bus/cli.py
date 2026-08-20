@@ -14,10 +14,12 @@ from typing import Any, List, Optional, Sequence, Tuple
 
 from .bus import CommandBus
 from .command_bus_group import CommandBusGroup, resolve_bus_attr_on_module
+from .event_bus import EventBus
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_BUS_ATTR = "bus"
+_BUS_TYPES = (CommandBus, EventBus)
 
 
 def _parse_target(spec: str) -> Tuple[str, str]:
@@ -42,14 +44,15 @@ def _parse_target(spec: str) -> Tuple[str, str]:
     return spec, _DEFAULT_BUS_ATTR
 
 
-def _resolve_single_bus(module: object, bus_attr: str) -> Tuple[str, CommandBus]:
-    """Validate ``module.bus_attr`` is a CommandBus; return (attr name, instance)."""
+def _resolve_single_bus(module: object, bus_attr: str) -> Tuple[str, Any]:
+    """Validate ``module.bus_attr`` is a CommandBus or EventBus; return (attr, instance)."""
     obj = getattr(module, bus_attr, None)
     if obj is None:
         raise SystemExit(f"Module has no attribute {bus_attr!r}")
-    if not isinstance(obj, CommandBus):
+    if not isinstance(obj, _BUS_TYPES):
         raise SystemExit(
-            f"Attribute {bus_attr!r} is not a CommandBus (got {type(obj).__name__})"
+            f"Attribute {bus_attr!r} is not a CommandBus or EventBus "
+            f"(got {type(obj).__name__})"
         )
     return bus_attr, obj
 
@@ -115,8 +118,8 @@ def _process_worker_main(
         sys.exit(1)
 
     bus = getattr(mod, bus_attr, None)
-    if not isinstance(bus, CommandBus):
-        wlog.error("Attribute %r is not a CommandBus", bus_attr)
+    if not isinstance(bus, _BUS_TYPES):
+        wlog.error("Attribute %r is not a CommandBus or EventBus", bus_attr)
         sys.exit(1)
 
     name = f"{bus_attr}:{worker_num}"
@@ -236,7 +239,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     parser = argparse.ArgumentParser(
         description=(
-            "Run CommandBus.work() in worker processes (fork on POSIX, spawn on Windows). "
+            "Run CommandBus/EventBus.work() in worker processes "
+            "(fork on POSIX, spawn on Windows). "
             "Target is module:attribute like uvicorn — e.g. myapp.worker:bus or "
             "myapp.worker:command_bus_group. If :attribute is omitted, :bus is assumed."
         )
@@ -246,7 +250,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         metavar="TARGET",
         help=(
             "Import path and object: dotted.module:attribute. "
-            "Attribute must be a CommandBus or CommandBusGroup. "
+            "Attribute must be a CommandBus, EventBus, or CommandBusGroup. "
             "Omit :attribute to use attribute name 'bus' (e.g. myapp.worker is myapp.worker:bus)."
         ),
     )
@@ -256,7 +260,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         default=1,
         metavar="N",
         help=(
-            "Process count for a single CommandBus. "
+            "Process count for a single CommandBus or EventBus. "
             "For CommandBusGroup, default count when WorkerConfig.workers is omitted (default: 1)"
         ),
     )
@@ -314,7 +318,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                 attr,
                 qn,
             )
-    elif isinstance(obj, CommandBus):
+    elif isinstance(obj, _BUS_TYPES):
         jobs = _worker_jobs(attr_name, args.workers)
         qn = getattr(obj.queue_adapter, "queue_name", attr_name)
         logger.info(
@@ -326,7 +330,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         )
     else:
         raise SystemExit(
-            f"Attribute {attr_name!r} must be a CommandBus or CommandBusGroup "
+            f"Attribute {attr_name!r} must be a CommandBus, EventBus, or CommandBusGroup "
             f"(got {type(obj).__name__})"
         )
 

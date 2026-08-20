@@ -46,6 +46,7 @@ For full examples (messages, handlers, SQS/Redis, execute-and-wait), see the [do
 | [Client and worker](docs/client-and-worker.md) | Shared module, producer, consumer. |
 | [Worker CLI](docs/cli.md) | `command-bus-worker module[:attr]` — `CommandBus` or `CommandBusGroup`, fork/spawn. |
 | [Queue adapters](docs/queue-adapters.md) | In-memory, SQS, RabbitMQ, Redis. |
+| [Pub/sub events](docs/pubsub-events.md) | EventBus, fan-out adapters, `@router.event()`. |
 | [Execute and wait](docs/execute-and-wait.md) | Response store, request/response. |
 | [API reference](docs/api-reference.md) | Types and methods overview. |
 
