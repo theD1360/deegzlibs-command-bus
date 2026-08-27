@@ -20,7 +20,7 @@ class EventMessage(TransmissibleBaseModel):
     """Base for pub/sub event payloads. Fire-and-forget; no response-store semantics."""
 
 
-class CommandHandler(ABC):
+class Handler(ABC):
     @abstractmethod
     def process(
         self, message: TransmissibleBaseModel
@@ -32,6 +32,10 @@ class CommandHandler(ABC):
         if iscoroutine(res):
             return await res
         return res
+
+
+class CommandHandler(Handler):
+    """Deprecated alias for :class:`Handler`."""
 
 
 class ResponseStore(ABC):
@@ -53,7 +57,7 @@ class ResponseStore(ABC):
         ...
 
 
-class CommandBusAdapter(ABC):
+class QueueAdapter(ABC):
     @abstractmethod
     def enqueue(
         self, message_instance: TransmissibleBaseModel, delay_seconds: int = 0
@@ -69,7 +73,11 @@ class CommandBusAdapter(ABC):
         pass
 
 
-class CommandBusRouterInterface(ABC):
+class CommandBusAdapter(QueueAdapter):
+    """Deprecated alias for :class:`QueueAdapter`."""
+
+
+class RouterInterface(ABC):
     @abstractmethod
     def get_handlers_for_message(
         self,
@@ -81,7 +89,7 @@ class CommandBusRouterInterface(ABC):
     def register(
         self,
         message_class: Type[TransmissibleBaseModel],
-        handler_class: Type[CommandHandler],
+        handler_class: Type[Handler],
     ) -> None:
         pass
 
@@ -89,14 +97,18 @@ class CommandBusRouterInterface(ABC):
     def deregister(
         self,
         message_class: Type[TransmissibleBaseModel],
-        handler_class: Type[CommandHandler],
+        handler_class: Type[Handler],
     ) -> None:
         pass
 
 
+class CommandBusRouterInterface(RouterInterface):
+    """Deprecated alias for :class:`RouterInterface`."""
+
+
 class CommandBusInterface(ABC):
     queue_name: str
-    registry: CommandBusRouterInterface
+    registry: RouterInterface
 
     @abstractmethod
     async def execute(
@@ -123,7 +135,7 @@ class CommandBusInterface(ABC):
 class EventBusInterface(ABC):
     """Pub/sub event bus: publish fans out; workers poll and dispatch."""
 
-    registry: CommandBusRouterInterface
+    registry: RouterInterface
 
     @abstractmethod
     async def publish(

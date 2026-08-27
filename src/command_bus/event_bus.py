@@ -4,19 +4,19 @@ import logging
 from typing import Optional, Type
 
 from .interfaces import (
-    CommandBusAdapter,
     EventBusInterface,
     EventMessage,
+    QueueAdapter,
 )
 from .parsers import MessageParserBase, ReprMessageParser
-from .registry import CommandBusRouter
+from .registry import Router
 
 logger = logging.getLogger(__name__)
 
 
 class EventBus(EventBusInterface):
     """
-    Event bus for fan-out pub/sub. Uses any CommandBusAdapter that broadcasts on
+    Event bus for fan-out pub/sub. Uses any QueueAdapter that broadcasts on
     enqueue (e.g. InMemoryPubSubAdapter, RedisPubSubAdapter, RabbitMqFanoutAdapter).
 
     Unlike CommandBus, publish does not require a local handler, and there is no
@@ -25,13 +25,13 @@ class EventBus(EventBusInterface):
 
     def __init__(
         self,
-        queue_adapter: CommandBusAdapter,
-        command_router: Optional[CommandBusRouter] = None,
+        queue_adapter: QueueAdapter,
+        command_router: Optional[Router] = None,
         message_parser_class: Optional[Type[MessageParserBase]] = None,
     ) -> None:
         self.queue_adapter = queue_adapter
         self.registry = (
-            command_router if command_router is not None else CommandBusRouter()
+            command_router if command_router is not None else Router()
         )
         self.message_parser_class = message_parser_class or ReprMessageParser
         if hasattr(queue_adapter, "bind_message_parser"):

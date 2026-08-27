@@ -5,7 +5,7 @@ from typing import Any, List, Optional
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
 
-from ...interfaces import CommandBusAdapter, TransmissibleBaseModel
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 
 
 class _RabbitMQFanoutMessage:
@@ -22,7 +22,7 @@ class _RabbitMQFanoutMessage:
         self._channel.basic_ack(self._delivery_tag)
 
 
-class RabbitMqFanoutAdapter(CommandBusAdapter):
+class RabbitMqFanoutAdapter(QueueAdapter):
     """
     Fan-out adapter using a RabbitMQ fanout exchange named ``queue_name``.
 

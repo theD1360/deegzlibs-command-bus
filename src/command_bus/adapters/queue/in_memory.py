@@ -1,9 +1,10 @@
-"""In-memory command bus adapter for tests or in-process use."""
+"""In-memory queue adapter for tests or in-process use."""
 
+import warnings
 from collections import deque
 from typing import Any, List
 
-from ...interfaces import CommandBusAdapter, CommandMessage
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 
 
 class _InMemoryMessage:
@@ -19,9 +20,9 @@ class _InMemoryMessage:
         pass
 
 
-class InMemoryCommandBusAdapter(CommandBusAdapter):
+class InMemoryQueueAdapter(QueueAdapter):
     """
-    In-memory FIFO queue adapter. Useful for tests or single-process command dispatch.
+    In-memory FIFO queue adapter. Useful for tests or single-process dispatch.
     delay_seconds is ignored (no native delay); messages are available immediately.
     """
 
@@ -31,7 +32,7 @@ class InMemoryCommandBusAdapter(CommandBusAdapter):
 
     def enqueue(
         self,
-        message_instance: CommandMessage,
+        message_instance: TransmissibleBaseModel,
         delay_seconds: int = 0,
     ) -> None:
         """Append message to the queue. delay_seconds is ignored."""
@@ -57,3 +58,15 @@ class InMemoryCommandBusAdapter(CommandBusAdapter):
                 break
             out.append(_InMemoryMessage(body=body))
         return out
+
+
+class InMemoryCommandBusAdapter(InMemoryQueueAdapter):
+    """Deprecated alias for :class:`InMemoryQueueAdapter`."""
+
+    def __init__(self, queue_name: str = "default") -> None:
+        warnings.warn(
+            "InMemoryCommandBusAdapter is deprecated; use InMemoryQueueAdapter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(queue_name=queue_name)

@@ -4,22 +4,26 @@ from .queue import (
     FileQueueAdapter,
     InMemoryCommandBusAdapter,
     InMemoryPubSubAdapter,
+    InMemoryQueueAdapter,
     SnsPubSubAdapter,
     SqsCommandBusAdapter,
+    SqsQueueAdapter,
 )
 
 __all__ = [
+    "InMemoryQueueAdapter",
     "InMemoryCommandBusAdapter",
     "InMemoryPubSubAdapter",
     "SnsPubSubAdapter",
+    "SqsQueueAdapter",
     "SqsCommandBusAdapter",
     "FileQueueAdapter",
 ]
 
 try:
-    from .queue import RabbitMqCommandBusAdapter
+    from .queue import RabbitMqCommandBusAdapter, RabbitMqQueueAdapter
 
-    __all__ += ["RabbitMqCommandBusAdapter"]
+    __all__ += ["RabbitMqQueueAdapter", "RabbitMqCommandBusAdapter"]
 except ImportError:
     pass
 
@@ -31,9 +35,9 @@ except ImportError:
     pass
 
 try:
-    from .queue import RedisCommandBusAdapter
+    from .queue import RedisCommandBusAdapter, RedisQueueAdapter
 
-    __all__ += ["RedisCommandBusAdapter"]
+    __all__ += ["RedisQueueAdapter", "RedisCommandBusAdapter"]
 except ImportError:
     pass
 

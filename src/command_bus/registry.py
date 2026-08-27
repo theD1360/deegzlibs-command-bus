@@ -1,16 +1,18 @@
-"""Router for mapping command message types to handlers."""
+"""Router for mapping message types to handlers."""
 
 import inspect
 import sys
+import warnings
 from typing import Any, Callable, List, Optional, Union, get_type_hints
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from .interfaces import (
-    CommandBusRouterInterface,
     CommandHandler,
+    Handler,
     CommandMessage,
     EventMessage,
+    RouterInterface,
     TransmissibleBaseModel,
 )
 
@@ -67,7 +69,7 @@ def _command_message_class_from_signature(
     return _message_class_from_signature(func, base=CommandMessage, model_name=model_name)
 
 
-class CommandBusRouterEntry(BaseModel):
+class RouterEntry(BaseModel):
     """A single router entry binding a message type to a handler class."""
 
     handler_class: type
@@ -87,24 +89,36 @@ class CommandBusRouterEntry(BaseModel):
             return self.message_qual_name == message_instance_or_class
         return self.message_qual_name == get_qual_name(message_instance_or_class)
 
-    def handler_instance(self) -> CommandHandler:
+    def handler_instance(self) -> Handler:
         """Return an instance of the handler."""
         return self.handler_class()
 
 
-class CommandBusRouter(CommandBusRouterInterface):
+class CommandBusRouterEntry(RouterEntry):
+    """Deprecated alias for :class:`RouterEntry`."""
+
+    def __init__(self, **data: Any) -> None:
+        warnings.warn(
+            "CommandBusRouterEntry is deprecated; use RouterEntry instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(**data)
+
+
+class Router(RouterInterface):
     """Default in-memory router of message types to handlers."""
 
     def __init__(
         self,
-        command_handlers: Optional[List[CommandBusRouterEntry]] = None,
+        command_handlers: Optional[List[RouterEntry]] = None,
     ) -> None:
-        self.handlers: List[CommandBusRouterEntry] = command_handlers or []
+        self.handlers: List[RouterEntry] = command_handlers or []
 
     def get_handlers_for_message(
         self,
         message_class: Union[TransmissibleBaseModel, type],
-    ) -> List[CommandBusRouterEntry]:
+    ) -> List[RouterEntry]:
         """Return all router entries that handle this message type."""
         return [
             entry for entry in self.handlers if entry.is_message_match(message_class)
@@ -116,7 +130,7 @@ class CommandBusRouter(CommandBusRouterInterface):
         handler_class: type,
     ) -> None:
         """Register a handler for a message class."""
-        entry = CommandBusRouterEntry(
+        entry = RouterEntry(
             message_class=message_class,
             handler_class=handler_class,
         )
@@ -129,7 +143,7 @@ class CommandBusRouter(CommandBusRouterInterface):
         handler_class: type,
     ) -> None:
         """Remove a handler registration."""
-        entry = CommandBusRouterEntry(
+        entry = RouterEntry(
             message_class=message_class,
             handler_class=handler_class,
         )
@@ -153,7 +167,7 @@ class CommandBusRouter(CommandBusRouterInterface):
 
             handler_class = type(
                 f"{func.__name__}_Handler",
-                (CommandHandler,),
+                (Handler,),
                 {"process": process},
             )
             self.register(message_class, handler_class)
@@ -186,3 +200,18 @@ class CommandBusRouter(CommandBusRouterInterface):
           await event_bus.publish(on_order_created(order_id="x", amount_cents=10))
         """
         return self._handler_decorator(EventMessage)
+
+
+class CommandBusRouter(Router):
+    """Deprecated alias for :class:`Router`."""
+
+    def __init__(
+        self,
+        command_handlers: Optional[List[RouterEntry]] = None,
+    ) -> None:
+        warnings.warn(
+            "CommandBusRouter is deprecated; use Router instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(command_handlers=command_handlers)

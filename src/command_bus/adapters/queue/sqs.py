@@ -1,12 +1,13 @@
-"""SQS-backed command bus adapter."""
+"""SQS-backed queue adapter."""
 
+import warnings
 from typing import Any
 
-from ...interfaces import CommandBusAdapter, CommandMessage
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 
 
-class SqsCommandBusAdapter(CommandBusAdapter):
-    """CommandBus adapter using AWS SQS for queue operations."""
+class SqsQueueAdapter(QueueAdapter):
+    """Queue adapter using AWS SQS for queue operations."""
 
     def __init__(self, queue_name: str, sqs_client: Any) -> None:
         self.queue_name = queue_name
@@ -17,7 +18,7 @@ class SqsCommandBusAdapter(CommandBusAdapter):
 
     def enqueue(
         self,
-        message_instance: CommandMessage,
+        message_instance: TransmissibleBaseModel,
         delay_seconds: int = 0,
     ) -> None:
         """Add a message to the queue."""
@@ -43,3 +44,15 @@ class SqsCommandBusAdapter(CommandBusAdapter):
             WaitTimeSeconds=wait_seconds,
             VisibilityTimeout=visibility_timeout,
         )
+
+
+class SqsCommandBusAdapter(SqsQueueAdapter):
+    """Deprecated alias for :class:`SqsQueueAdapter`."""
+
+    def __init__(self, queue_name: str, sqs_client: Any) -> None:
+        warnings.warn(
+            "SqsCommandBusAdapter is deprecated; use SqsQueueAdapter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(queue_name=queue_name, sqs_client=sqs_client)

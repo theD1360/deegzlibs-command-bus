@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from command_bus import CommandBus, CommandBusRouter, CommandMessage
+from command_bus import CommandBus, CommandBusRouter, CommandMessage, Router
 from command_bus.adapters import SqsCommandBusAdapter
 from command_bus.parsers import JsonMessageParser, ReprMessageParser
 
@@ -63,14 +63,14 @@ async def test_sqs_command_bus_execute_enqueues_when_handler_registered():
 
 
 def test_command_bus_default_router():
-    """CommandBus uses a new CommandBusRouter when command_router is omitted."""
+    """CommandBus uses a new Router when command_router is omitted."""
     queue = MagicMock()
     client = MagicMock()
     client.get_queue_by_name.return_value = queue
     adapter = SqsCommandBusAdapter(queue_name="q", sqs_client=client)
     bus = CommandBus(queue_adapter=adapter)
     assert bus.registry is not None
-    assert isinstance(bus.registry, CommandBusRouter)
+    assert isinstance(bus.registry, Router)
     assert bus.registry.get_handlers_for_message(DummyMessage(id="x")) == []
 
 

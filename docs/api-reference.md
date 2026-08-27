@@ -15,11 +15,13 @@ Base class for command payloads (Pydantic `BaseModel`). Subclass it to define yo
 
 Base class for pub/sub event payloads. Fire-and-forget; no response-store semantics. See [Pub/sub events](pubsub-events.md).
 
-### CommandHandler
+### Handler
 
 Abstract handler. Subclass and implement **`process(self, message)`**. Can return anything (sync or async). The return value is used when the bus has a response store and the message has a `correlation_id`.
 
-### CommandBusRouter
+**Deprecated:** **`CommandHandler`** (alias for **`Handler`**).
+
+### Router
 
 Maps message types to handler classes.
 
@@ -29,12 +31,17 @@ Maps message types to handler classes.
 - **`command()`** – Decorator: build CommandMessage from a function's signature, register a handler, return a message factory. See [Handler decorator](handler-decorator.md).
 - **`event()`** – Same pattern for EventMessage / EventBus.publish. See [Pub/sub events](pubsub-events.md).
 
-### WorkerConfig / CommandBusGroup
+**Deprecated:** **`CommandBusRouter`** (alias for **`Router`**), **`CommandBusRouterEntry`** (alias for **`RouterEntry`**).
 
-Declarative layout for the [Worker CLI](cli.md) when you want **several `CommandBus` or `EventBus` instances** in one supervised process tree. Point the CLI at **`module:attribute`** where `attribute` is the `CommandBusGroup` (e.g. `myapp.worker:command_bus_group`).
+### BusGroup / WorkerConfig
+
+Declarative layout for the [Worker CLI](cli.md) when you want **several `CommandBus` or `EventBus` instances** in one supervised process tree. Point the CLI at **`module:attribute`** where `attribute` is the `BusGroup` (e.g. `myapp.worker:bus_group`).
+
+- **`BusGroup(*WorkerConfig)`** – At least one config. **`validate(module)`** checks each bus and binding. **`iter_jobs(module, default_workers)`** returns the `(bus_attr, worker_index)` list used to spawn processes.
+
+**Deprecated:** **`CommandBusGroup`** (alias for **`BusGroup`**).
 
 - **`WorkerConfig(bus, workers=None)`** – **`bus`** is a `CommandBus` or `EventBus`. If **`workers`** is `None`, the CLI **`--workers`** value applies to that entry. Each bus must also be stored on a **top-level attribute** of the worker module so the CLI can resolve a name for subprocesses (**`resolve_bus_attr_on_module(module, bus)`**).
-- **`CommandBusGroup(*WorkerConfig)`** – At least one config. **`validate(module)`** checks each bus and binding. **`iter_jobs(module, default_workers)`** returns the `(bus_attr, worker_index)` list used to spawn processes.
 
 ### CommandBus
 
@@ -72,18 +79,20 @@ Return the qualified name (module + class name) for a class or instance. Used fo
 
 Set the parser when creating the bus: **`message_parser_class=...`**.
 
-## Queue adapters (CommandBusAdapter)
+## Queue adapters (QueueAdapter)
 
 Implement **`enqueue(message_instance, delay_seconds=0)`**, **`dequeue(message_instance)`**, **`get_messages(...)`**.
 
-- **InMemoryCommandBusAdapter** – In-memory FIFO.
-- **SqsCommandBusAdapter** – AWS SQS. Extra: `[sqs]` or `[boto3]`.
-- **RabbitMqCommandBusAdapter** – RabbitMQ. Extra: `[rabbitmq]`.
-- **RedisCommandBusAdapter** – Redis Lists. Extra: `[redis]`.
+- **InMemoryQueueAdapter** – In-memory FIFO.
+- **SqsQueueAdapter** – AWS SQS. Extra: `[sqs]` or `[boto3]`.
+- **RabbitMqQueueAdapter** – RabbitMQ. Extra: `[rabbitmq]`.
+- **RedisQueueAdapter** – Redis Lists. Extra: `[redis]`.
 - **InMemoryPubSubAdapter** – In-memory fan-out.
 - **RedisPubSubAdapter** – Redis Pub/Sub. Extra: `[redis]`.
 - **RabbitMqFanoutAdapter** – RabbitMQ fanout exchange. Extra: `[rabbitmq]`.
 - **SnsPubSubAdapter** – AWS SNS fan-out (SQS subscriptions). Extra: `[sns]` or `[boto3]`.
+
+**Deprecated queue adapter names:** `InMemoryCommandBusAdapter`, `SqsCommandBusAdapter`, `RabbitMqCommandBusAdapter`, `RedisCommandBusAdapter`, and **`CommandBusAdapter`** (alias for **`QueueAdapter`**).
 
 ## Response store (ResponseStore)
 
@@ -94,8 +103,10 @@ Implement **`set(key, value, ttl_seconds=60)`**, **`get(key)`**, **`delete(key)`
 
 ## Interfaces
 
-- **CommandBusAdapter** – Abstract queue contract.
+- **QueueAdapter** – Abstract queue contract.
+- **CommandBusAdapter** – Deprecated alias for **QueueAdapter**.
 - **CommandBusInterface** – Abstract command bus contract.
 - **EventBusInterface** – Abstract event bus contract.
-- **CommandBusRouterInterface** – Abstract router contract.
+- **RouterInterface** – Abstract router contract.
+- **CommandBusRouterInterface** – Deprecated alias for **RouterInterface**.
 - **ResponseStore** – Abstract response store contract.

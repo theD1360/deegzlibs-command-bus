@@ -6,21 +6,21 @@ import time
 import uuid
 from typing import Any, Optional, Type
 
-from .interfaces import CommandBusAdapter, CommandBusInterface, CommandMessage, ResponseStore
+from .interfaces import QueueAdapter, CommandBusInterface, CommandMessage, ResponseStore
 from .parsers import MessageParserBase, ReprMessageParser
-from .registry import CommandBusRouter
+from .registry import Router
 
 logger = logging.getLogger(__name__)
 
 
 class CommandBus(CommandBusInterface):
     """
-    Generic command bus that uses any CommandBusAdapter for queue operations
-    and a CommandBusRouter for handler lookup. Use with SqsCommandBusAdapter,
-    RabbitMqCommandBusAdapter, or any custom adapter.
+    Generic command bus that uses any QueueAdapter for queue operations
+    and a Router for handler lookup. Use with SqsQueueAdapter,
+    RabbitMqQueueAdapter, or any custom adapter.
 
-    command_router is optional; if omitted, a new CommandBusRouter() is used.
-    You can still use CommandBusRouter independently and pass it in when you
+    command_router is optional; if omitted, a new Router() is used.
+    You can still use Router independently and pass it in when you
     want to share or preconfigure it.
 
     response_store is optional; when set, the bus can store handler return values
@@ -29,15 +29,15 @@ class CommandBus(CommandBusInterface):
 
     def __init__(
         self,
-        queue_adapter: CommandBusAdapter,
-        command_router: Optional[CommandBusRouter] = None,
+        queue_adapter: QueueAdapter,
+        command_router: Optional[Router] = None,
         message_parser_class: Optional[Type[MessageParserBase]] = None,
         response_store: Optional[ResponseStore] = None,
         response_ttl_seconds: int = 60,
     ) -> None:
         self.queue_adapter = queue_adapter
         self.registry = (
-            command_router if command_router is not None else CommandBusRouter()
+            command_router if command_router is not None else Router()
         )
         self.message_parser_class = message_parser_class or ReprMessageParser
         self.response_store = response_store

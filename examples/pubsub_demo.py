@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import asyncio
 
-from command_bus import CommandBusRouter, EventBus, EventMessage
+from command_bus import Router, EventBus, EventMessage
 from command_bus.adapters import InMemoryPubSubAdapter
 
 
@@ -29,7 +29,7 @@ def make_worker(name: str) -> EventBus:
     """Each worker needs its own adapter instance on the same topic."""
     from command_bus import CommandHandler
 
-    router = CommandBusRouter()
+    router = Router()
 
     class Handler(CommandHandler):
         def process(self, message: EventMessage) -> None:

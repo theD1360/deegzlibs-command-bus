@@ -1,23 +1,25 @@
 """Queue adapters for the command bus (SQS, RabbitMQ, Redis, in-memory, file, etc.)."""
 
 from .file import FileQueueAdapter
-from .in_memory import InMemoryCommandBusAdapter
+from .in_memory import InMemoryCommandBusAdapter, InMemoryQueueAdapter
 from .in_memory_pubsub import InMemoryPubSubAdapter
 from .sns_pubsub import SnsPubSubAdapter
-from .sqs import SqsCommandBusAdapter
+from .sqs import SqsCommandBusAdapter, SqsQueueAdapter
 
 __all__ = [
+    "InMemoryQueueAdapter",
     "InMemoryCommandBusAdapter",
     "InMemoryPubSubAdapter",
     "SnsPubSubAdapter",
+    "SqsQueueAdapter",
     "SqsCommandBusAdapter",
     "FileQueueAdapter",
 ]
 
 try:
-    from .rabbitmq import RabbitMqCommandBusAdapter
+    from .rabbitmq import RabbitMqCommandBusAdapter, RabbitMqQueueAdapter
 
-    __all__ += ["RabbitMqCommandBusAdapter"]
+    __all__ += ["RabbitMqQueueAdapter", "RabbitMqCommandBusAdapter"]
 except ImportError:
     pass
 
@@ -29,9 +31,9 @@ except ImportError:
     pass
 
 try:
-    from .redis import RedisCommandBusAdapter
+    from .redis import RedisCommandBusAdapter, RedisQueueAdapter
 
-    __all__ += ["RedisCommandBusAdapter"]
+    __all__ += ["RedisQueueAdapter", "RedisCommandBusAdapter"]
 except ImportError:
     pass
 

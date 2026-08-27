@@ -3,7 +3,7 @@
 import json
 from typing import Any, List, Optional, Type
 
-from ...interfaces import CommandBusAdapter, TransmissibleBaseModel
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 from ...parsers import MessageParserBase
 
 
@@ -31,7 +31,7 @@ class _SnsPubSubMessage:
         self._sqs_message.delete()
 
 
-class SnsPubSubAdapter(CommandBusAdapter):
+class SnsPubSubAdapter(QueueAdapter):
     """
     Fan-out adapter using AWS SNS with per-worker SQS subscriptions.
 

@@ -13,7 +13,7 @@ import time
 from typing import Any, List, Optional, Sequence, Tuple
 
 from .bus import CommandBus
-from .command_bus_group import CommandBusGroup, resolve_bus_attr_on_module
+from .command_bus_group import BusGroup, CommandBusGroup, resolve_bus_attr_on_module
 from .event_bus import EventBus
 
 logger = logging.getLogger(__name__)
@@ -250,7 +250,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         metavar="TARGET",
         help=(
             "Import path and object: dotted.module:attribute. "
-            "Attribute must be a CommandBus, EventBus, or CommandBusGroup. "
+            "Attribute must be a CommandBus, EventBus, or BusGroup. "
             "Omit :attribute to use attribute name 'bus' (e.g. myapp.worker is myapp.worker:bus)."
         ),
     )
@@ -261,7 +261,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         metavar="N",
         help=(
             "Process count for a single CommandBus or EventBus. "
-            "For CommandBusGroup, default count when WorkerConfig.workers is omitted (default: 1)"
+            "For BusGroup, default count when WorkerConfig.workers is omitted (default: 1)"
         ),
     )
     parser.add_argument(
@@ -304,7 +304,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     if obj is None:
         raise SystemExit(f"Module {module_name!r} has no attribute {attr_name!r}")
 
-    if isinstance(obj, CommandBusGroup):
+    if isinstance(obj, (BusGroup, CommandBusGroup)):
         obj.validate(mod)
         jobs = obj.iter_jobs(mod, args.workers)
         for cfg in obj.configs:
@@ -330,7 +330,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         )
     else:
         raise SystemExit(
-            f"Attribute {attr_name!r} must be a CommandBus, EventBus, or CommandBusGroup "
+            f"Attribute {attr_name!r} must be a CommandBus, EventBus, or BusGroup "
             f"(got {type(obj).__name__})"
         )
 

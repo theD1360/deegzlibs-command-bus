@@ -7,10 +7,10 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
-from ...interfaces import CommandBusAdapter, CommandMessage
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 
 
-class FileQueueAdapter(CommandBusAdapter):
+class FileQueueAdapter(QueueAdapter):
     """File-based queue adapter that persists to disk for cross-process access."""
 
     def __init__(
@@ -76,7 +76,7 @@ class FileQueueAdapter(CommandBusAdapter):
         except Exception as e:
             raise RuntimeError(f"Failed to save queue: {e}") from e
 
-    def enqueue(self, message_instance: CommandMessage, delay_seconds: int = 0) -> None:
+    def enqueue(self, message_instance: TransmissibleBaseModel, delay_seconds: int = 0) -> None:
         """Add a message to the queue."""
         try:
             self._acquire_lock()

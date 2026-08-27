@@ -10,14 +10,14 @@ _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from command_bus import CommandBus, CommandBusGroup, WorkerConfig
-from command_bus.adapters import InMemoryCommandBusAdapter
+from command_bus import BusGroup, CommandBus, CommandBusGroup, WorkerConfig
+from command_bus.adapters import InMemoryQueueAdapter
 
 
 def _sample_module() -> tuple:
     mod = types.ModuleType("testgroup")
-    bus_a = CommandBus(queue_adapter=InMemoryCommandBusAdapter(queue_name="qa"))
-    bus_b = CommandBus(queue_adapter=InMemoryCommandBusAdapter(queue_name="qb"))
+    bus_a = CommandBus(queue_adapter=InMemoryQueueAdapter(queue_name="qa"))
+    bus_b = CommandBus(queue_adapter=InMemoryQueueAdapter(queue_name="qb"))
     mod.alpha = bus_a
     mod.beta = bus_b
     return mod, bus_a, bus_b
@@ -34,7 +34,7 @@ def test_resolve_bus_attr_picks_lexicographically_first_alias():
     from command_bus import resolve_bus_attr_on_module
 
     mod = types.ModuleType("aliases")
-    bus = CommandBus(queue_adapter=InMemoryCommandBusAdapter(queue_name="q"))
+    bus = CommandBus(queue_adapter=InMemoryQueueAdapter(queue_name="q"))
     mod.z_second = bus
     mod.a_first = bus
     assert resolve_bus_attr_on_module(mod, bus) == "a_first"
@@ -42,7 +42,7 @@ def test_resolve_bus_attr_picks_lexicographically_first_alias():
 
 def test_command_bus_group_iter_jobs():
     mod, bus_a, bus_b = _sample_module()
-    g = CommandBusGroup(
+    g = BusGroup(
         WorkerConfig(bus_a, workers=2),
         WorkerConfig(bus_b, workers=1),
     )
@@ -51,7 +51,7 @@ def test_command_bus_group_iter_jobs():
 
 def test_command_bus_group_default_workers():
     mod, bus_a, bus_b = _sample_module()
-    g = CommandBusGroup(
+    g = BusGroup(
         WorkerConfig(bus_a, workers=2),
         WorkerConfig(bus_b, workers=None),
     )
@@ -64,9 +64,22 @@ def test_command_bus_group_default_workers():
     ]
 
 
+def test_bus_group_empty_raises():
+    with pytest.raises(ValueError, match="at least one"):
+        BusGroup()
+
+
+def test_command_bus_group_emits_deprecation_warning():
+    mod, bus_a, bus_b = _sample_module()
+    with pytest.warns(DeprecationWarning, match="CommandBusGroup is deprecated"):
+        g = CommandBusGroup(WorkerConfig(bus_a), WorkerConfig(bus_b))
+    assert isinstance(g, BusGroup)
+
+
 def test_command_bus_group_empty_raises():
     with pytest.raises(ValueError, match="at least one"):
-        CommandBusGroup()
+        with pytest.warns(DeprecationWarning):
+            CommandBusGroup()
 
 
 def test_command_bus_group_validate():
@@ -75,16 +88,23 @@ def test_command_bus_group_validate():
     cli_group_worker_module.command_bus_group.validate(cli_group_worker_module)
 
 
+def test_bus_group_validate():
+    from tests.support import cli_group_worker_module
+
+    assert isinstance(cli_group_worker_module.command_bus_group, BusGroup)
+    cli_group_worker_module.command_bus_group.validate(cli_group_worker_module)
+
+
 def test_iter_jobs_workers_zero_raises():
     mod, bus_a, _ = _sample_module()
-    g = CommandBusGroup(WorkerConfig(bus_a, workers=0))
+    g = BusGroup(WorkerConfig(bus_a, workers=0))
     with pytest.raises(ValueError, match=">= 1"):
         g.iter_jobs(mod, default_workers=1)
 
 
 def test_bus_not_bound_to_module_raises():
     mod = types.ModuleType("orphan")
-    bus = CommandBus(queue_adapter=InMemoryCommandBusAdapter(queue_name="x"))
-    g = CommandBusGroup(WorkerConfig(bus))
+    bus = CommandBus(queue_adapter=InMemoryQueueAdapter(queue_name="x"))
+    g = BusGroup(WorkerConfig(bus))
     with pytest.raises(SystemExit, match="module-level"):
         g.validate(mod)

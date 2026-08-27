@@ -1,7 +1,7 @@
 """Tests for command_bus interfaces and base types."""
 
 import pytest
-from command_bus import CommandMessage, CommandHandler, TransmissibleBaseModel
+from command_bus import CommandMessage, CommandHandler, Handler, TransmissibleBaseModel
 
 
 def test_transmissible_base_model_str():
@@ -42,3 +42,9 @@ def test_command_handler_abstract():
     """CommandHandler cannot be instantiated without process()."""
     with pytest.raises(TypeError):
         CommandHandler()
+
+
+def test_handler_abstract():
+    """Handler cannot be instantiated without process()."""
+    with pytest.raises(TypeError):
+        Handler()

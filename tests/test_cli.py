@@ -105,5 +105,5 @@ def test_cli_target_must_be_bus_or_group(monkeypatch):
 
     monkeypatch.setattr(cli.importlib, "import_module", lambda name: fake)
 
-    with pytest.raises(SystemExit, match="CommandBus, EventBus, or CommandBusGroup"):
+    with pytest.raises(SystemExit, match="CommandBus, EventBus, or BusGroup"):
         cli.main(["fake.module:thing", "--workers", "1"])

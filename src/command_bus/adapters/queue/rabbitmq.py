@@ -1,11 +1,12 @@
-"""RabbitMQ-backed command bus adapter."""
+"""RabbitMQ-backed queue adapter."""
 
+import warnings
 from typing import Any, List, Optional
 
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
 
-from ...interfaces import CommandBusAdapter, CommandMessage
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 
 
 class _RabbitMQMessage:
@@ -22,8 +23,8 @@ class _RabbitMQMessage:
         self._channel.basic_ack(self._delivery_tag)
 
 
-class RabbitMqCommandBusAdapter(CommandBusAdapter):
-    """CommandBus adapter using RabbitMQ for queue operations (via pika)."""
+class RabbitMqQueueAdapter(QueueAdapter):
+    """Queue adapter using RabbitMQ for queue operations (via pika)."""
 
     def __init__(
         self,
@@ -63,7 +64,7 @@ class RabbitMqCommandBusAdapter(CommandBusAdapter):
 
     def enqueue(
         self,
-        message_instance: CommandMessage,
+        message_instance: TransmissibleBaseModel,
         delay_seconds: int = 0,
     ) -> None:
         """Add a message to the queue. (delay_seconds is ignored; use a delayed-exchange plugin for delays.)"""
@@ -117,3 +118,24 @@ class RabbitMqCommandBusAdapter(CommandBusAdapter):
             self._connection.close()
         self._channel = None
         self._connection = None
+
+
+class RabbitMqCommandBusAdapter(RabbitMqQueueAdapter):
+    """Deprecated alias for :class:`RabbitMqQueueAdapter`."""
+
+    def __init__(
+        self,
+        queue_name: str,
+        connection_url: Optional[str] = None,
+        connection_params: Optional[pika.ConnectionParameters] = None,
+    ) -> None:
+        warnings.warn(
+            "RabbitMqCommandBusAdapter is deprecated; use RabbitMqQueueAdapter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(
+            queue_name=queue_name,
+            connection_url=connection_url,
+            connection_params=connection_params,
+        )

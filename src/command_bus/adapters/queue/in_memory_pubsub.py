@@ -4,7 +4,7 @@ from collections import defaultdict, deque
 from threading import Lock
 from typing import Any, Deque, Dict, List, Set
 
-from ...interfaces import CommandBusAdapter, TransmissibleBaseModel
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 
 
 class _InMemoryPubSubMessage:
@@ -27,7 +27,7 @@ _subscriber_queues: Dict[int, Deque[str]] = {}
 _next_subscriber_id = 1
 
 
-class InMemoryPubSubAdapter(CommandBusAdapter):
+class InMemoryPubSubAdapter(QueueAdapter):
     """
     In-memory fan-out adapter. Each instance is one subscriber on ``queue_name``
     (topic). ``enqueue`` copies the message body to every subscriber's local queue.

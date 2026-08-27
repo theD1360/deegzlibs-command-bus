@@ -1,8 +1,9 @@
-"""Redis-backed command bus adapter using Redis Lists (LPUSH/BRPOP)."""
+"""Redis-backed queue adapter using Redis Lists (LPUSH/BRPOP)."""
 
+import warnings
 from typing import Any, List
 
-from ...interfaces import CommandBusAdapter, CommandMessage
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 
 
 class _RedisMessage:
@@ -18,9 +19,9 @@ class _RedisMessage:
         pass
 
 
-class RedisCommandBusAdapter(CommandBusAdapter):
+class RedisQueueAdapter(QueueAdapter):
     """
-    CommandBus adapter using a Redis List for queue operations (LPUSH to enqueue, BRPOP to consume).
+    Queue adapter using a Redis List for queue operations (LPUSH to enqueue, BRPOP to consume).
     FIFO: producers LPUSH, workers BRPOP. delay_seconds is not supported (use a delayed-queue pattern separately if needed).
     """
 
@@ -30,7 +31,7 @@ class RedisCommandBusAdapter(CommandBusAdapter):
 
     def enqueue(
         self,
-        message_instance: CommandMessage,
+        message_instance: TransmissibleBaseModel,
         delay_seconds: int = 0,
     ) -> None:
         """Add a message to the queue. delay_seconds is ignored (Redis List has no native delay)."""
@@ -65,3 +66,15 @@ class RedisCommandBusAdapter(CommandBusAdapter):
             body = raw.decode("utf-8") if isinstance(raw, bytes) else raw
             out.append(_RedisMessage(body=body))
         return out
+
+
+class RedisCommandBusAdapter(RedisQueueAdapter):
+    """Deprecated alias for :class:`RedisQueueAdapter`."""
+
+    def __init__(self, redis_client: Any, queue_name: str) -> None:
+        warnings.warn(
+            "RedisCommandBusAdapter is deprecated; use RedisQueueAdapter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(redis_client=redis_client, queue_name=queue_name)

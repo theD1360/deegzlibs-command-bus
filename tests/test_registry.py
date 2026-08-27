@@ -8,6 +8,8 @@ from command_bus import (
     CommandBusRouterEntry,
     CommandMessage,
     CommandHandler,
+    Router,
+    RouterEntry,
     get_qual_name,
 )
 
@@ -31,7 +33,7 @@ def test_get_qual_name_instance():
 
 
 def test_registry_register_and_get_handlers():
-    registry = CommandBusRouter()
+    registry = Router()
     registry.register(SampleMessage, SampleHandler)
     entries = registry.get_handlers_for_message(SampleMessage)
     assert len(entries) == 1
@@ -40,7 +42,7 @@ def test_registry_register_and_get_handlers():
 
 
 def test_registry_get_handlers_by_instance():
-    registry = CommandBusRouter()
+    registry = Router()
     registry.register(SampleMessage, SampleHandler)
     m = SampleMessage(value=2)
     entries = registry.get_handlers_for_message(m)
@@ -48,7 +50,7 @@ def test_registry_get_handlers_by_instance():
 
 
 def test_registry_deregister():
-    registry = CommandBusRouter()
+    registry = Router()
     registry.register(SampleMessage, SampleHandler)
     registry.deregister(SampleMessage, SampleHandler)
     entries = registry.get_handlers_for_message(SampleMessage)
@@ -56,7 +58,7 @@ def test_registry_deregister():
 
 
 def test_registry_entry_handler_instance():
-    entry = CommandBusRouterEntry(
+    entry = RouterEntry(
         message_class=SampleMessage,
         handler_class=SampleHandler,
     )
@@ -65,7 +67,7 @@ def test_registry_entry_handler_instance():
 
 
 def test_registry_entry_is_message_match():
-    entry = CommandBusRouterEntry(
+    entry = RouterEntry(
         message_class=SampleMessage,
         handler_class=SampleHandler,
     )
@@ -77,7 +79,7 @@ def test_registry_entry_is_message_match():
 
 def test_registry_command_decorator_creates_message_from_params():
     """@router.command() creates CommandMessage from function params; calling the decorator returns the message."""
-    router = CommandBusRouter()
+    router = Router()
     received: list[dict] = []
 
     @router.command()
@@ -98,7 +100,7 @@ def test_registry_command_decorator_creates_message_from_params():
 
 def test_registry_command_decorator_returns_message_factory():
     """Decorator returns a callable that builds the message; call it and pass to handler."""
-    router = CommandBusRouter()
+    router = Router()
 
     @router.command()
     def my_handler(x: int) -> int:
@@ -116,7 +118,7 @@ def test_registry_command_decorator_returns_message_factory():
 @pytest.mark.asyncio
 async def test_registry_command_decorator_async_handler():
     """@router.command() works with async functions; handler.__call__ awaits process()."""
-    router = CommandBusRouter()
+    router = Router()
     received: list[str] = []
 
     @router.command()
@@ -135,7 +137,7 @@ async def test_registry_command_decorator_async_handler():
 
 def test_registry_command_decorator_optional_and_default_params():
     """Generated message supports Optional and default parameter values."""
-    router = CommandBusRouter()
+    router = Router()
 
     @router.command()
     def handle(tag: str, count: int = 0, extra: Optional[str] = None) -> str:
@@ -148,3 +150,18 @@ def test_registry_command_decorator_optional_and_default_params():
     assert handler.process(msg1) == "a:0:None"
     msg2 = handle(tag="b", count=2, extra="x")
     assert handler.process(msg2) == "b:2:'x'"
+
+
+def test_command_bus_router_emits_deprecation_warning():
+    with pytest.warns(DeprecationWarning, match="CommandBusRouter is deprecated"):
+        router = CommandBusRouter()
+    assert isinstance(router, Router)
+
+
+def test_command_bus_router_entry_emits_deprecation_warning():
+    with pytest.warns(DeprecationWarning, match="CommandBusRouterEntry is deprecated"):
+        entry = CommandBusRouterEntry(
+            message_class=SampleMessage,
+            handler_class=SampleHandler,
+        )
+    assert isinstance(entry, RouterEntry)

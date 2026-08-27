@@ -4,7 +4,7 @@ from collections import deque
 from threading import Lock, Thread
 from typing import Any, Deque, List, Optional
 
-from ...interfaces import CommandBusAdapter, TransmissibleBaseModel
+from ...interfaces import QueueAdapter, TransmissibleBaseModel
 
 
 class _RedisPubSubMessage:
@@ -20,7 +20,7 @@ class _RedisPubSubMessage:
         pass
 
 
-class RedisPubSubAdapter(CommandBusAdapter):
+class RedisPubSubAdapter(QueueAdapter):
     """
     Fan-out adapter using Redis PUBLISH / SUBSCRIBE.
 
