@@ -88,3 +88,4 @@ For **broadcast** (every worker gets a copy), use the event bus and fan-out adap
 - **`InMemoryPubSubAdapter`** – in-process fan-out.
 - **`RedisPubSubAdapter`** – Redis PUBLISH/SUBSCRIBE (`[redis]`).
 - **`RabbitMqFanoutAdapter`** – RabbitMQ fanout exchange (`[rabbitmq]`).
+- **`SnsPubSubAdapter`** – AWS SNS publish with per-worker SQS subscriptions (`[sns]` or `[boto3]`).

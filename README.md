@@ -8,7 +8,7 @@ A small command bus with pluggable queue adapters. Define command messages as Py
 pip install deegzlibs-command-bus
 ```
 
-Optional extras: **`[sqs]`**, **`[redis]`**, **`[rabbitmq]`**. See [Installation](docs/installation.md).
+Optional extras: **`[sqs]`**, **`[sns]`**, **`[boto3]`**, **`[redis]`**, **`[rabbitmq]`**. See [Installation](docs/installation.md).
 
 ## Quick start
 

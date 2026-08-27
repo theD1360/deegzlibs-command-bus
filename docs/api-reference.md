@@ -65,9 +65,10 @@ Return the qualified name (module + class name) for a class or instance. Used fo
 ## Parsers
 
 - **MessageParser** / **ReprMessageParser** – Default parser for repr-style strings.
-- **JsonMessageParser** – Parser for JSON (type field + kwargs).
+- **JsonMessageParser** – Parser for JSON (type field + kwargs). Optional **MessageCodec** wrapper; **`JsonMessageParser.dumps(...)`** for serialization.
 - **Base64MessageParser** – Base64-encoded (optionally gzip) payloads; uses an inner parser.
-- **MessageParserBase** – Abstract base; implement **`initialize() -> CommandMessage`** for custom formats.
+- **MessageCodec** – Optional encode/decode wrapper (**Base64MessageCodec**, **GzipMessageCodec**, **ChainedMessageCodec**, **configure_json_parser**).
+- **MessageParserBase** – Abstract base; **`initialize()`**, **`dumps()`**, optional **`subject()`** / **`message_attributes()`**.
 
 Set the parser when creating the bus: **`message_parser_class=...`**.
 
@@ -76,12 +77,13 @@ Set the parser when creating the bus: **`message_parser_class=...`**.
 Implement **`enqueue(message_instance, delay_seconds=0)`**, **`dequeue(message_instance)`**, **`get_messages(...)`**.
 
 - **InMemoryCommandBusAdapter** – In-memory FIFO.
-- **SqsCommandBusAdapter** – AWS SQS. Extra: `[sqs]`.
+- **SqsCommandBusAdapter** – AWS SQS. Extra: `[sqs]` or `[boto3]`.
 - **RabbitMqCommandBusAdapter** – RabbitMQ. Extra: `[rabbitmq]`.
 - **RedisCommandBusAdapter** – Redis Lists. Extra: `[redis]`.
 - **InMemoryPubSubAdapter** – In-memory fan-out.
 - **RedisPubSubAdapter** – Redis Pub/Sub. Extra: `[redis]`.
 - **RabbitMqFanoutAdapter** – RabbitMQ fanout exchange. Extra: `[rabbitmq]`.
+- **SnsPubSubAdapter** – AWS SNS fan-out (SQS subscriptions). Extra: `[sns]` or `[boto3]`.
 
 ## Response store (ResponseStore)
 

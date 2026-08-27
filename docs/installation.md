@@ -14,7 +14,9 @@ It also installs the **`command-bus-worker`** console script for running queue c
 
 | Extra | Use case |
 |-------|----------|
-| `[sqs]` | AWS SQS queue adapter |
+| `[sqs]` | AWS SQS command queue adapter |
+| `[sns]` | AWS SNS pub/sub adapter (EventBus fan-out via SQS subscriptions) |
+| `[boto3]` | boto3 only (use with SQS or SNS adapters) |
 | `[redis]` | Redis queue adapter and Redis response store (for `execute_and_wait`) |
 | `[rabbitmq]` | RabbitMQ queue adapter (requires `pika`) |
 
@@ -22,6 +24,8 @@ Examples:
 
 ```bash
 pip install deegzlibs-command-bus[sqs]
+pip install deegzlibs-command-bus[sns]
+pip install deegzlibs-command-bus[boto3]
 pip install deegzlibs-command-bus[redis]
 pip install deegzlibs-command-bus[rabbitmq]
 ```
@@ -29,5 +33,5 @@ pip install deegzlibs-command-bus[rabbitmq]
 Install multiple extras with a comma:
 
 ```bash
-pip install deegzlibs-command-bus[sqs,redis]
+pip install deegzlibs-command-bus[sqs,sns,redis]
 ```

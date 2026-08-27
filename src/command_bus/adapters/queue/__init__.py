@@ -3,11 +3,13 @@
 from .file import FileQueueAdapter
 from .in_memory import InMemoryCommandBusAdapter
 from .in_memory_pubsub import InMemoryPubSubAdapter
+from .sns_pubsub import SnsPubSubAdapter
 from .sqs import SqsCommandBusAdapter
 
 __all__ = [
     "InMemoryCommandBusAdapter",
     "InMemoryPubSubAdapter",
+    "SnsPubSubAdapter",
     "SqsCommandBusAdapter",
     "FileQueueAdapter",
 ]

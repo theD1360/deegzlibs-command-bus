@@ -34,6 +34,8 @@ class EventBus(EventBusInterface):
             command_router if command_router is not None else CommandBusRouter()
         )
         self.message_parser_class = message_parser_class or ReprMessageParser
+        if hasattr(queue_adapter, "bind_message_parser"):
+            queue_adapter.bind_message_parser(self.message_parser_class)
 
     async def publish(
         self,

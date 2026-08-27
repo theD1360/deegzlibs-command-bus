@@ -4,12 +4,14 @@ from .queue import (
     FileQueueAdapter,
     InMemoryCommandBusAdapter,
     InMemoryPubSubAdapter,
+    SnsPubSubAdapter,
     SqsCommandBusAdapter,
 )
 
 __all__ = [
     "InMemoryCommandBusAdapter",
     "InMemoryPubSubAdapter",
+    "SnsPubSubAdapter",
     "SqsCommandBusAdapter",
     "FileQueueAdapter",
 ]

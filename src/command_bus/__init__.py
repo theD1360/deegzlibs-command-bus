@@ -17,16 +17,25 @@ from .interfaces import (
     TransmissibleBaseModel,
 )
 from .parsers import (
+    Base64MessageCodec,
     Base64MessageParser,
+    ChainedMessageCodec,
+    GzipMessageCodec,
+    IdentityMessageCodec,
     JsonMessageParser,
+    MessageCodec,
     MessageParser,
     MessageParserBase,
     ReprMessageParser,
+    MessageAttributes,
+    configure_json_parser,
 )
 from .registry import CommandBusRouter, CommandBusRouterEntry, get_qual_name
 
 __all__ = [
+    "Base64MessageCodec",
     "Base64MessageParser",
+    "ChainedMessageCodec",
     "CommandBus",
     "CommandBusGroup",
     "CommandBusAdapter",
@@ -40,10 +49,15 @@ __all__ = [
     "EventBus",
     "EventBusInterface",
     "EventMessage",
+    "GzipMessageCodec",
+    "IdentityMessageCodec",
     "JsonMessageParser",
+    "MessageCodec",
     "MessageParser",
     "MessageParserBase",
     "ReprMessageParser",
+    "MessageAttributes",
+    "configure_json_parser",
     "TransmissibleBaseModel",
     "WorkerConfig",
     "resolve_bus_attr_on_module",

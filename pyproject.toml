@@ -26,6 +26,8 @@ commitizen = "^3.0.0"
 
 [tool.poetry.extras]
 sqs = ["boto3"]
+sns = ["boto3"]
+boto3 = ["boto3"]
 rabbitmq = ["pika"]
 redis = ["redis"]
 
@@ -39,7 +41,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Diego Alejos", email = "lego.admin@gmail.com"}
 ]
-keywords = ["command-bus", "command-pattern", "queue", "sqs", "rabbitmq", "redis", "async", "pydantic"]
+keywords = ["command-bus", "command-pattern", "queue", "sqs", "sns", "boto3", "rabbitmq", "redis", "async", "pydantic"]
 dependencies = [
     "pydantic>=2.0",
 ]
@@ -67,6 +69,8 @@ Issues = "https://github.com/deegzlibs/deegzlibs-command-bus/issues"
 
 [project.optional-dependencies]
 sqs = ["boto3"]
+sns = ["boto3"]
+boto3 = ["boto3"]
 rabbitmq = ["pika>=1.0"]
 redis = ["redis>=4.0"]
 dev = ["pytest>=7.0.0", "pytest-cov>=4.0.0", "pytest-asyncio>=0.21.0"]

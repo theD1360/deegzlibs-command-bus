@@ -1,11 +1,14 @@
 """Parser for JSON message payloads."""
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
-from ..interfaces import CommandMessage
+from ..interfaces import CommandMessage, TransmissibleBaseModel
 from ..utils import ModuleImporter
 from .base import MessageParserBase
+
+if TYPE_CHECKING:
+    from .codec import MessageCodec
 
 
 class JsonMessageParser(MessageParserBase):
@@ -20,15 +23,34 @@ class JsonMessageParser(MessageParserBase):
         {"__type__": "mymodule.events.OrderCreated", "order_id": "abc", "amount_cents": 1999}
 
     The type key is configurable via the constructor (default: "__type__").
+    An optional :class:`MessageCodec` can wrap the JSON string (e.g. base64 or gzip).
     """
 
     def __init__(
         self,
         message_string: str,
         type_key: str = "__type__",
+        codec: Optional["MessageCodec"] = None,
     ) -> None:
-        self._payload: Dict[str, Any] = json.loads(message_string)
+        decoded = codec.decode(message_string) if codec is not None else message_string
+        self._payload: Dict[str, Any] = json.loads(decoded)
         self._type_key = type_key
+
+    @classmethod
+    def dumps(  # type: ignore[override]
+        cls,
+        message: TransmissibleBaseModel,
+        type_key: str = "__type__",
+        codec: Optional["MessageCodec"] = None,
+    ) -> str:
+        """Serialize a message to JSON, optionally wrapped by a codec."""
+        fqcn = f"{message.__class__.__module__}.{message.__class__.__qualname__}"
+        payload = dict(message.model_dump())
+        payload[type_key] = fqcn
+        json_str = json.dumps(payload)
+        if codec is not None:
+            return codec.encode(json_str)
+        return json_str
 
     def initialize(self) -> CommandMessage:
         """Parse the JSON and return a CommandMessage instance."""

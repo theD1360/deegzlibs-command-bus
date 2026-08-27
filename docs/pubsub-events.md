@@ -73,6 +73,34 @@ adapter = RabbitMqFanoutAdapter(
 
 Call **`adapter.close()`** when shutting down workers.
 
+### SNS (with SQS subscriptions)
+
+**`SnsPubSubAdapter(topic_arn, sns_client, sqs_client=None, queue_url=None, message_parser_class=None)`** – publishes to an SNS topic using optional parser hooks (`dumps`, `subject`, `message_attributes`). Each worker polls its own SQS queue when consuming. Omit `sqs_client` and `queue_url` for publish-only. Extra: `[sns]` or `[boto3]`.
+
+```python
+import boto3
+from command_bus import EventBus, CommandBusRouter
+from command_bus.adapters import SnsPubSubAdapter
+
+sns = boto3.client("sns")
+sqs = boto3.resource("sqs")
+
+adapter = SnsPubSubAdapter(
+    topic_arn="arn:aws:sns:us-east-1:123456789012:order-events",
+    sns_client=sns,
+    sqs_client=sqs,
+    queue_url="https://sqs.us-east-1.amazonaws.com/123456789012/worker-a",
+    message_parser_class=MyEnvelopeParser,
+)
+bus = EventBus(
+    queue_adapter=adapter,
+    command_router=CommandBusRouter(),
+    message_parser_class=MyEnvelopeParser,
+)
+```
+
+Give **each worker its own SQS queue** subscribed to the same SNS topic (standard AWS fan-out). The adapter unwraps the SNS notification envelope automatically when polling SQS.
+
 ## Multi-worker example
 
 ```python
@@ -105,4 +133,4 @@ You can also put an `EventBus` next to a `CommandBus` in a [`CommandBusGroup`](c
 
 ## Out of scope
 
-SNS → SQS fan-out and response-store on events are not supported in this release. Use `CommandBus` when you need request/response.
+Response-store on events is not supported. Use `CommandBus` when you need request/response.

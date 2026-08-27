@@ -1,17 +1,51 @@
 """Abstract base for message parsers. Implement this to support different message formats."""
 
 from abc import ABC, abstractmethod
+from typing import Dict, Optional
 
-from ..interfaces import CommandMessage
+from ..interfaces import TransmissibleBaseModel
+
+# Transport message attributes shape (e.g. SNS MessageAttributes):
+# name -> {DataType, StringValue}
+MessageAttributes = Dict[str, Dict[str, str]]
 
 
 class MessageParserBase(ABC):
     """
-    Interface for parsing a raw message (e.g. string or bytes) into a CommandMessage.
-    Implement this to support different serialization formats (repr-style, JSON, etc.).
+    Bidirectional message parser for queue and SNS transports.
+
+    Inbound: ``Parser(raw_string).initialize() -> TransmissibleBaseModel``
+    Outbound: ``Parser.dumps(message) -> str``
+
+    Subclasses may override optional publish hooks: ``subject`` and
+    ``message_attributes``. Defaults preserve backward-compatible repr
+    serialization and plain publish (body only).
     """
 
     @abstractmethod
-    def initialize(self) -> CommandMessage:
-        """Parse the raw message and return a CommandMessage instance."""
+    def initialize(self) -> TransmissibleBaseModel:
+        """Parse the raw message and return a message instance."""
         ...
+
+    @classmethod
+    def dumps(cls, message: TransmissibleBaseModel) -> str:
+        """Serialize a message for transport. Default: repr-style ``str(message)``."""
+        return str(message)
+
+    @classmethod
+    def subject(
+        cls,
+        message: TransmissibleBaseModel,
+        encoded_body: str,
+    ) -> Optional[str]:
+        """Publish subject for this message, or None to omit."""
+        return None
+
+    @classmethod
+    def message_attributes(
+        cls,
+        message: TransmissibleBaseModel,
+        encoded_body: str,
+    ) -> Optional[MessageAttributes]:
+        """Publish message attributes for this message, or None to omit."""
+        return None

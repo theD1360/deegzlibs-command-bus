@@ -32,6 +32,8 @@ setup(
     ],
     extras_require={
         "sqs": ["boto3"],
+        "sns": ["boto3"],
+        "boto3": ["boto3"],
         "rabbitmq": ["pika>=1.0"],
         "redis": ["redis>=4.0"],
         "dev": [
