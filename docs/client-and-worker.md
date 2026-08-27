@@ -9,16 +9,16 @@ Define commands, handlers, and a **single function that builds the bus**. Client
 ```python
 # commands.py
 import boto3
-from command_bus import CommandBus, CommandBusRouter, CommandMessage, CommandHandler
-from command_bus.adapters import SqsCommandBusAdapter
+from command_bus import CommandBus, Router, CommandMessage, Handler
+from command_bus.adapters import SqsQueueAdapter
 
-router = CommandBusRouter()
+router = Router()
 
 class OrderCreated(CommandMessage):
     order_id: str
     amount_cents: int
 
-class SendOrderConfirmation(CommandHandler):
+class SendOrderConfirmation(Handler):
     def process(self, message: CommandMessage):
         print(f"Sent confirmation for order {message.order_id}")
 
@@ -31,7 +31,7 @@ def on_payment_received(order_id: str, amount_cents: int):
 def create_bus():
     """Shared bus configuration for both client and worker."""
     sqs = boto3.resource("sqs")
-    adapter = SqsCommandBusAdapter(queue_name="orders", sqs_client=sqs)
+    adapter = SqsQueueAdapter(queue_name="orders", sqs_client=sqs)
     bus = CommandBus(queue_adapter=adapter, command_router=router)
     return bus
 ```
@@ -85,13 +85,13 @@ if __name__ == "__main__":
 
 ## Built-in worker CLI
 
-For production-style deployments you can skip the hand-written loop and use the **`command-bus-worker`** entry point (installed with the package). Pass a **target** `module:attribute` (like uvicorn): the attribute must be a **`CommandBus`** or **`CommandBusGroup`**. Omit **`:attribute`** to use **`bus`**. The CLI spawns **`--workers`** processes per bus (or uses the group’s `WorkerConfig`); each child imports the module and runs `work()` in its own interpreter so CPU-bound handlers are not limited by a single GIL.
+For production-style deployments you can skip the hand-written loop and use the **`command-bus-worker`** entry point (installed with the package). Pass a **target** `module:attribute` (like uvicorn): the attribute must be a **`CommandBus`**, **`EventBus`**, or **`BusGroup`**. Omit **`:attribute`** to use **`bus`**. The CLI spawns **`--workers`** processes per bus (or uses the group’s `WorkerConfig`); each child imports the module and runs `work()` in its own interpreter so CPU-bound handlers are not limited by a single GIL.
 
 ```bash
 command-bus-worker myapp.worker:bus --workers 4 -v
 ```
 
-For **several buses in one process tree**, expose a **`CommandBusGroup`** and run e.g. **`command-bus-worker myapp.worker:command_bus_group`**. See [Worker CLI](cli.md).
+For **several buses in one process tree**, expose a **`BusGroup`** and run e.g. **`command-bus-worker myapp.worker:bus_group`**. See [Worker CLI](cli.md).
 
 ## Shutdown
 

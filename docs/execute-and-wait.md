@@ -33,16 +33,16 @@ Handler return values must be JSON-serializable (or Pydantic models; they are st
 ```python
 import boto3
 import redis
-from command_bus import CommandBus, CommandBusRouter
-from command_bus.adapters import SqsCommandBusAdapter, RedisResponseStore
+from command_bus import CommandBus, Router
+from command_bus.adapters import SqsQueueAdapter, RedisResponseStore
 
-router = CommandBusRouter()
+router = Router()
 router.register(OrderCreated, SendOrderConfirmation)
 
 def create_bus():
     r = redis.Redis(host="localhost", port=6379, decode_responses=False)
     response_store = RedisResponseStore(r, key_prefix="myapp:response:", default_ttl_seconds=60)
-    adapter = SqsCommandBusAdapter(queue_name="orders", sqs_client=boto3.resource("sqs"))
+    adapter = SqsQueueAdapter(queue_name="orders", sqs_client=boto3.resource("sqs"))
     bus = CommandBus(queue_adapter=adapter, command_router=router, response_store=response_store)
     return bus
 

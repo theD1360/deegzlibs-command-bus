@@ -12,11 +12,11 @@ If you define handlers directly in `client.py` and `worker.py` (both running as 
 
 ```python
 # commands.py (shared module)
-from command_bus import CommandBus, CommandBusRouter
+from command_bus import CommandBus, Router
 from command_bus.adapters import FileQueueAdapter, FileResponseStore
 
 # Create a shared router
-router = CommandBusRouter()
+router = Router()
 
 # Define handlers using the decorator
 @router.command()

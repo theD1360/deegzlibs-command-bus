@@ -14,12 +14,12 @@ class OrderCreated(CommandMessage):
 
 ## 2. Define handlers
 
-Implement `CommandHandler`: define a class with a `process(self, message)` method. The method can be sync or async.
+Implement `Handler`: define a class with a `process(self, message)` method. The method can be sync or async.
 
 ```python
-from command_bus import CommandMessage, CommandHandler
+from command_bus import CommandMessage, Handler
 
-class SendOrderConfirmation(CommandHandler):
+class SendOrderConfirmation(Handler):
     def process(self, message: CommandMessage):
         print(f"Order {message.order_id} confirmed")
 ```
@@ -29,13 +29,13 @@ class SendOrderConfirmation(CommandHandler):
 Create a router, register the message type with the handler, then use a bus (with a queue adapter) to execute commands. The bus enqueues the message; a worker later runs `await bus.work()` to dispatch to handlers.
 
 ```python
-from command_bus import CommandBus, CommandBusRouter
-from command_bus.adapters import InMemoryCommandBusAdapter
+from command_bus import CommandBus, Router
+from command_bus.adapters import InMemoryQueueAdapter
 
-router = CommandBusRouter()
+router = Router()
 router.register(OrderCreated, SendOrderConfirmation)
 
-adapter = InMemoryCommandBusAdapter(queue_name="commands")
+adapter = InMemoryQueueAdapter(queue_name="commands")
 bus = CommandBus(queue_adapter=adapter, command_router=router)
 
 # Enqueue a command (fire-and-forget)

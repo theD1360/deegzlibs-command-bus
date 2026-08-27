@@ -22,12 +22,12 @@ Example: `tests.my_commands.OrderCreated(order_id='ord-1', amount_cents=1999)`.
 Pass **`message_parser_class`** when creating the bus. If you omit it, **`ReprMessageParser`** is used.
 
 ```python
-from command_bus import CommandBus, CommandBusRouter
-from command_bus.adapters import SqsCommandBusAdapter
+from command_bus import CommandBus, Router
+from command_bus.adapters import SqsQueueAdapter
 from command_bus.parsers import JsonMessageParser
 
-adapter = SqsCommandBusAdapter(queue_name="my-commands", sqs_client=sqs)
-router = CommandBusRouter()
+adapter = SqsQueueAdapter(queue_name="my-commands", sqs_client=sqs)
+router = Router()
 bus = CommandBus(
     queue_adapter=adapter,
     command_router=router,
@@ -49,7 +49,7 @@ bus = CommandBus(
 Wrap JSON payloads for transport (e.g. gzip then base64):
 
 ```python
-from command_bus import CommandBus, CommandBusRouter
+from command_bus import CommandBus, Router
 from command_bus.parsers import (
     Base64MessageCodec,
     ChainedMessageCodec,

@@ -15,13 +15,13 @@ await bus.execute(on_order_created(order_id=1, amount_cents=10), wait=False)
 ## Example
 
 ```python
-from command_bus import CommandBus, CommandBusRouter
-from command_bus.adapters import RedisCommandBusAdapter
+from command_bus import CommandBus, Router
+from command_bus.adapters import RedisQueueAdapter
 import redis
 
 r = redis.Redis(host="localhost", port=6379)
-adapter = RedisCommandBusAdapter(redis_client=r, queue_name="commands")
-router = CommandBusRouter()
+adapter = RedisQueueAdapter(redis_client=r, queue_name="commands")
+router = Router()
 bus = CommandBus(queue_adapter=adapter, command_router=router)
 
 @router.command()

@@ -13,11 +13,11 @@ Optional extras: **`[sqs]`**, **`[sns]`**, **`[boto3]`**, **`[redis]`**, **`[rab
 ## Quick start
 
 ```python
-from command_bus import CommandBus, CommandBusRouter, CommandMessage, CommandHandler
-from command_bus.adapters import InMemoryCommandBusAdapter
+from command_bus import CommandBus, Router, CommandMessage, Handler
+from command_bus.adapters import InMemoryQueueAdapter
 
-router = CommandBusRouter()
-adapter = InMemoryCommandBusAdapter(queue_name="commands")
+router = Router()
+adapter = InMemoryQueueAdapter(queue_name="commands")
 bus = CommandBus(queue_adapter=adapter, command_router=router)
 
 @router.command()
@@ -31,7 +31,7 @@ await bus.execute(on_order_created(order_id="ord-1", amount_cents=1999), wait=Fa
 await bus.work()
 ```
 
-To run workers as **separate OS processes** (useful when handlers do a lot of CPU work), use the built-in CLI, e.g. **`command-bus-worker myapp.worker:bus --workers 4`** (omit **`:bus`** if your bus lives on attribute **`bus`**). For several queues in one supervised tree, point at a **`CommandBusGroup`**, e.g. **`myapp.worker:command_bus_group`** (see [Worker CLI](docs/cli.md)).
+To run workers as **separate OS processes** (useful when handlers do a lot of CPU work), use the built-in CLI, e.g. **`command-bus-worker myapp.worker:bus --workers 4`** (omit **`:bus`** if your bus lives on attribute **`bus`**). For several queues in one supervised tree, point at a **`BusGroup`**, e.g. **`myapp.worker:bus_group`** (see [Worker CLI](docs/cli.md)).
 
 For full examples (messages, handlers, SQS/Redis, execute-and-wait), see the [documentation](docs/index.md).
 
@@ -44,7 +44,7 @@ For full examples (messages, handlers, SQS/Redis, execute-and-wait), see the [do
 | [Handler decorator](docs/handler-decorator.md) | `@router.command()` and message factory. |
 | [Message formats and parsers](docs/message-formats-and-parsers.md) | Repr, JSON, Base64, custom parser. |
 | [Client and worker](docs/client-and-worker.md) | Shared module, producer, consumer. |
-| [Worker CLI](docs/cli.md) | `command-bus-worker module[:attr]` — `CommandBus` or `CommandBusGroup`, fork/spawn. |
+| [Worker CLI](docs/cli.md) | `command-bus-worker module[:attr]` — `CommandBus`, `EventBus`, or `BusGroup`. |
 | [Queue adapters](docs/queue-adapters.md) | In-memory, SQS, RabbitMQ, Redis. |
 | [Pub/sub events](docs/pubsub-events.md) | EventBus, fan-out adapters, `@router.event()`. |
 | [Execute and wait](docs/execute-and-wait.md) | Response store, request/response. |

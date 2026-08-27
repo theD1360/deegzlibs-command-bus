@@ -1,6 +1,6 @@
 # Worker CLI
 
-The package includes a small **command-line worker** that imports your module, resolves a **`CommandBus`** or **`CommandBusGroup`**, and runs **`await bus.work()`** in a loop. Each logical worker runs in its **own OS process** so CPU-heavy handlers are not serialized by the CPython GIL.
+The package includes a small **command-line worker** that imports your module, resolves a **`CommandBus`**, **`EventBus`**, or **`BusGroup`**, and runs **`await bus.work()`** in a loop. Each logical worker runs in its **own OS process** so CPU-heavy handlers are not serialized by the CPython GIL.
 
 The first argument is a **target** in the same spirit as **uvicorn** / **gunicorn**: **`dotted.module:attribute`**. The CLI loads that attribute and branches on its type.
 
@@ -19,7 +19,7 @@ command-bus-worker myapp.worker --workers 4
 ```
 
 ```bash
-python -m command_bus.cli myapp.worker:command_bus_group --workers 2
+python -m command_bus.cli myapp.worker:bus_group --workers 2
 ```
 
 The module path must be importable on `PYTHONPATH` (or installed in the active environment).
@@ -28,11 +28,11 @@ The module path must be importable on `PYTHONPATH` (or installed in the active e
 
 | Target example | Meaning |
 |----------------|---------|
-| `myapp.worker` | Import `myapp.worker`, use attribute **`bus`** (must be a `CommandBus`). |
-| `myapp.worker:orders_bus` | Import `myapp.worker`, use attribute **`orders_bus`** (must be a `CommandBus`). |
-| `myapp.worker:command_bus_group` | Import `myapp.worker`, use attribute **`command_bus_group`** (must be a `CommandBusGroup`). |
+| `myapp.worker` | Import `myapp.worker`, use attribute **`bus`** (must be a `CommandBus` or `EventBus`). |
+| `myapp.worker:orders_bus` | Import `myapp.worker`, use attribute **`orders_bus`**. |
+| `myapp.worker:bus_group` | Import `myapp.worker`, use attribute **`bus_group`** (must be a `BusGroup`). |
 
-If the attribute is neither a **`CommandBus`** nor a **`CommandBusGroup`**, the CLI exits with an error.
+If the attribute is not a **`CommandBus`**, **`EventBus`**, or **`BusGroup`**, the CLI exits with an error.
 
 ## Worker module layout
 
@@ -42,15 +42,15 @@ Expose a **`CommandBus`** at **`bus`** (or point the target at another attribute
 
 ```python
 # myapp/worker.py
-from command_bus import CommandBus, CommandBusRouter
-from command_bus.adapters import SqsCommandBusAdapter
+from command_bus import CommandBus, Router
+from command_bus.adapters import SqsQueueAdapter
 import boto3
 
-router = CommandBusRouter()
+router = Router()
 # ... register handlers on router ...
 
 sqs = boto3.resource("sqs")
-adapter = SqsCommandBusAdapter(queue_name="orders", sqs_client=sqs)
+adapter = SqsQueueAdapter(queue_name="orders", sqs_client=sqs)
 bus = CommandBus(queue_adapter=adapter, command_router=router)
 ```
 
@@ -61,49 +61,51 @@ command-bus-worker myapp.worker:orders_bus --workers 2   # if you named it order
 
 The parent process imports the module once to validate the target before spawning workers. **Each child process imports the module again** and uses **`getattr(module, bus_attr)`** for its queue loop. With **`fork`** (POSIX), avoid opening non–fork-safe resources at import time if possible; prefer lazy initialization inside handlers or after import.
 
-### `CommandBusGroup` (several buses, one CLI)
+### `BusGroup` (several buses, one CLI)
 
-Define a **`CommandBusGroup`** and point the target at it. Pass each **`CommandBus` instance** into **`WorkerConfig`** (ergonomic in code). The CLI finds the **module-level attribute name** for each bus (same object identity on the worker module) so child processes can re-import the module and `getattr` the bus—nothing is pickled.
+Define a **`BusGroup`** and point the target at it. Pass each bus instance into **`WorkerConfig`**. The CLI finds the **module-level attribute name** for each bus (same object identity on the worker module) so child processes can re-import the module and `getattr` the bus—nothing is pickled.
 
 Each bus **must** be assigned to a top-level attribute on that module (e.g. `orders_bus = CommandBus(...)`). If the same instance is bound under several names, the **lexicographically smallest** name is used. After **fork**, avoid opening non–fork-safe clients at import time before workers start.
 
 ```python
 # myapp/worker.py
-from command_bus import CommandBus, CommandBusGroup, CommandBusRouter, WorkerConfig
-from command_bus.adapters import SqsCommandBusAdapter
+from command_bus import CommandBus, BusGroup, Router, WorkerConfig
+from command_bus.adapters import SqsQueueAdapter
 import boto3
 
-router = CommandBusRouter()
+router = Router()
 # ... register handlers ...
 
 sqs = boto3.resource("sqs")
 orders_bus = CommandBus(
-    queue_adapter=SqsCommandBusAdapter(queue_name="orders", sqs_client=sqs),
+    queue_adapter=SqsQueueAdapter(queue_name="orders", sqs_client=sqs),
     command_router=router,
 )
 priority_bus = CommandBus(
-    queue_adapter=SqsCommandBusAdapter(queue_name="priority", sqs_client=sqs),
+    queue_adapter=SqsQueueAdapter(queue_name="priority", sqs_client=sqs),
     command_router=router,
 )
 
-command_bus_group = CommandBusGroup(
+bus_group = BusGroup(
     WorkerConfig(orders_bus, workers=4),
     WorkerConfig(priority_bus, workers=2),
 )
 ```
 
 ```bash
-command-bus-worker myapp.worker:command_bus_group
+command-bus-worker myapp.worker:bus_group
 ```
 
 If a **`WorkerConfig`** omits **`workers`**, the CLI **`--workers`** value is used for that entry only.
+
+> **Note:** The attribute name `command_bus_group` with a **`CommandBusGroup`** instance still works (deprecated alias).
 
 ## Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `TARGET` | (required) | `module` or `module:attribute` (see above). |
-| `--workers` | `1` | Process count for one `CommandBus`, or default per `WorkerConfig` when `workers` is omitted in a `CommandBusGroup`. |
+| `--workers` | `1` | Process count for one bus, or default per `WorkerConfig` when `workers` is omitted in a `BusGroup`. |
 | `--poll-interval` | `0.05` | Seconds to sleep after each `work()` iteration when polling (reduces CPU when the queue is often empty). Use `0` for no sleep (still yields briefly in the asyncio loop). |
 | `-v` / `--verbose` | off | Once: INFO logging. Twice: DEBUG. |
 

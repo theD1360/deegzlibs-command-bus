@@ -5,10 +5,10 @@ Commands use **competing consumers** (one message → one worker). Events use **
 ## Quick start
 
 ```python
-from command_bus import EventBus, CommandBusRouter
+from command_bus import EventBus, Router
 from command_bus.adapters import InMemoryPubSubAdapter
 
-router = CommandBusRouter()
+router = Router()
 adapter = InMemoryPubSubAdapter(queue_name="order-events")
 bus = EventBus(queue_adapter=adapter, command_router=router)
 
@@ -79,7 +79,7 @@ Call **`adapter.close()`** when shutting down workers.
 
 ```python
 import boto3
-from command_bus import EventBus, CommandBusRouter
+from command_bus import EventBus, Router
 from command_bus.adapters import SnsPubSubAdapter
 
 sns = boto3.client("sns")
@@ -94,7 +94,7 @@ adapter = SnsPubSubAdapter(
 )
 bus = EventBus(
     queue_adapter=adapter,
-    command_router=CommandBusRouter(),
+    command_router=Router(),
     message_parser_class=MyEnvelopeParser,
 )
 ```
@@ -105,11 +105,11 @@ Give **each worker its own SQS queue** subscribed to the same SNS topic (standar
 
 ```python
 # shared.py
-from command_bus import EventBus, CommandBusRouter
+from command_bus import EventBus, Router
 from command_bus.adapters import RedisPubSubAdapter
 import redis
 
-router = CommandBusRouter()
+router = Router()
 
 @router.event()
 def on_order_created(order_id: str):
@@ -129,7 +129,7 @@ bus = make_bus()
 # all four processes receive each published event
 ```
 
-You can also put an `EventBus` next to a `CommandBus` in a [`CommandBusGroup`](cli.md).
+You can also put an `EventBus` next to a `CommandBus` in a [`BusGroup`](cli.md).
 
 ## Out of scope
 
