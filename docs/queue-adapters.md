@@ -64,7 +64,7 @@ Constructor: **`RabbitMqQueueAdapter(queue_name, connection_url=None, connection
 
 ## Redis
 
-**RedisQueueAdapter** – Redis Lists (LPUSH/BRPOP). Install with `pip install deegzlibs-command-bus[redis]`. You can use the same Redis instance for the queue and for the [response store](execute-and-wait.md) (e.g. `execute_and_wait`).
+**RedisQueueAdapter** – Redis Streams with a consumer group (at-least-once). Requires **Redis ≥ 6.2** (`XAUTOCLAIM`). Install with `pip install deegzlibs-command-bus[redis]`. You can use the same Redis instance for the queue and for the [response store](execute-and-wait.md) (e.g. `execute_and_wait`).
 
 ```python
 import redis
@@ -76,10 +76,50 @@ adapter = RedisQueueAdapter(redis_client=r, queue_name="commands")
 bus = CommandBus(queue_adapter=adapter)
 ```
 
-Constructor: **`RedisQueueAdapter(redis_client, queue_name: str)`**.
+Constructor: **`RedisQueueAdapter(redis_client, queue_name, *, consumer_group="command-bus", consumer_name=None, default_visibility_timeout=60)`**.
 
-- **`delay_seconds`** is not supported (Redis List has no native delay).
-- Messages are removed when popped; failed handlers do not automatically requeue.
+| Method | Redis command |
+|--------|----------------|
+| `enqueue` | `XADD` (field `body`) |
+| `get_messages(..., visibility_timeout=…)` | `XAUTOCLAIM` (idle ≥ VT) then `XREADGROUP` |
+| `dequeue` / `message.delete()` | `XACK` + `XDEL` |
+| `pending_message_count` | `XLEN` |
+| `purge_messages` | `DELETE` key |
+
+- **Visibility timeout** is real: crash before ack leaves the message in the pending entries list; after `visibility_timeout` seconds another poll can reclaim it via `XAUTOCLAIM`.
+- Delivery is **at-least-once**. Handlers must be **idempotent** (ack can fail after a successful handler).
+- **`delay_seconds`** is not supported.
+- Use a **single consumer group** per logical worker fleet (default `command-bus`). A second group on the same stream would duplicate processing.
+- Failed handlers still ack by default (see [WorkerApp ack policy](worker-app.md)). Raise **`ReleaseMessage`** to skip ack and retry after VT.
+
+### Migrating from Redis Lists (pre-3.0)
+
+v3.0 replaced Lists (`LPUSH`/`BRPOP`) with Streams. A Redis key cannot be both a list and a stream (`WRONGTYPE`).
+
+1. Drain old list workers, **or** migrate with:
+
+```python
+from command_bus.adapters import migrate_redis_list_to_stream
+
+# Target must differ from the list key (a key cannot be both list and stream)
+n = migrate_redis_list_to_stream(r, "commands", "commands:v3")
+# or default target "{list_key}:stream"
+n = migrate_redis_list_to_stream(r, "commands")
+```
+
+2. Point producers and workers at the stream key (and Redis ≥ 6.2).
+3. Delete the old list key after cutover.
+
+### Downstream adoption checklist
+
+After upgrading to `deegzlibs-command-bus>=3.0.0`:
+
+1. Bump the dependency; ensure Redis ≥ 6.2.
+2. Migrate or drain any list keys.
+3. Run workers via **`WorkerApp`** + `command-bus-worker` (not a custom BRPOP loop).
+4. Remove app-level reclaim that only compensated for destructive list pops.
+5. Prefer **no per-tenant queue locks**; if serialization is ever needed, optional middleware can raise `ReleaseMessage` when busy.
+6. Smoke: enqueue → crash mid-handler → message reappears after VT → completes; `command-bus count|drain|purge` against the WorkerApp target.
 
 ---
 

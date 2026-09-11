@@ -156,9 +156,9 @@ command-bus purge myapp.worker:app --queue orders -y
 
 **Notes:**
 
-- **Count** is adapter-specific (exact for in-memory/Redis/file; approximate for SQS). Live pub/sub adapters may show `n/a`.
-- **Drain** fetches and deletes messages without running handlers — useful for stuck test queues.
-- **Purge** uses a native clear when the adapter supports it (Redis `DEL`, SQS `PurgeQueue`, etc.).
+- **Count** is adapter-specific (exact for in-memory/file; Redis Streams `XLEN` ≈ undelivered + still-pending; approximate for SQS). Live pub/sub adapters may show `n/a`.
+- **Drain** fetches and deletes messages without running handlers (Redis Streams: claim then `XACK`+`XDEL`) — useful for stuck test queues.
+- **Purge** uses a native clear when the adapter supports it (Redis `DELETE` stream key, SQS `PurgeQueue`, etc.).
 
 ## Multiple queues without a group
 

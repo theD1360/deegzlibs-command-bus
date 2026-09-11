@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Any, MutableSequence, Optional, Type
 
+from .exceptions import ReleaseMessage
 from .interfaces import (
     EventBusInterface,
     EventMessage,
@@ -88,16 +89,25 @@ class EventBus(EventBusInterface):
             await core(ctx)
 
     async def work(self, *, concurrency: int = 1) -> int:
-        """Poll the subscription and dispatch messages (up to ``concurrency`` in parallel)."""
+        """
+        Poll the subscription and dispatch messages (up to ``concurrency`` in parallel).
+
+        Ack policy matches :meth:`command_bus.bus.CommandBus.work`: failures still
+        ack; raise :class:`~command_bus.exceptions.ReleaseMessage` to skip ack.
+        """
         messages = self.queue_adapter.get_messages(max_messages=max(1, concurrency))
         if not messages:
             return 0
 
         async def _handle(message: Any) -> None:
+            released = False
             try:
                 await self.dispatch(message.body)
+            except ReleaseMessage:
+                released = True
             finally:
-                self.queue_adapter.dequeue(message)
+                if not released:
+                    self.queue_adapter.dequeue(message)
 
         await asyncio.gather(*(_handle(m) for m in messages))
         return len(messages)

@@ -6,6 +6,7 @@ import time
 import uuid
 from typing import Any, MutableSequence, Optional, Type
 
+from .exceptions import ReleaseMessage
 from .interfaces import QueueAdapter, CommandBusInterface, CommandMessage, ResponseStore
 from .middleware import DispatchContext, Middleware, run_middleware_stack
 from .parsers import MessageParserBase, ReprMessageParser
@@ -172,16 +173,26 @@ class CommandBus(CommandBusInterface):
             await core(ctx)
 
     async def work(self, *, concurrency: int = 1) -> int:
-        """Poll the queue and dispatch messages to handlers (up to ``concurrency`` in parallel)."""
+        """
+        Poll the queue and dispatch messages to handlers (up to ``concurrency`` in parallel).
+
+        Ack policy: success and handler/middleware failures still ``dequeue`` (ack).
+        Raise :class:`~command_bus.exceptions.ReleaseMessage` to skip ack so the
+        message can become visible again after the adapter's visibility timeout.
+        """
         messages = self.queue_adapter.get_messages(max_messages=max(1, concurrency))
         if not messages:
             return 0
 
         async def _handle(message: Any) -> None:
+            released = False
             try:
                 await self.dispatch(message.body)
+            except ReleaseMessage:
+                released = True
             finally:
-                self.queue_adapter.dequeue(message)
+                if not released:
+                    self.queue_adapter.dequeue(message)
 
         await asyncio.gather(*(_handle(m) for m in messages))
         return len(messages)

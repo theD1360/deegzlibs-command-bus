@@ -40,6 +40,7 @@ from .registry import (
     RouterEntry,
     get_qual_name,
 )
+from .exceptions import ReleaseMessage
 from .middleware import DispatchContext, Middleware
 from .worker_app import RegisteredBus, WorkerApp
 
@@ -78,6 +79,7 @@ __all__ = [
     "RouterInterface",
     "TransmissibleBaseModel",
     "RegisteredBus",
+    "ReleaseMessage",
     "WorkerConfig",
     "WorkerApp",
     "configure_json_parser",

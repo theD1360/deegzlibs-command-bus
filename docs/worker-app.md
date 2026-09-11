@@ -135,7 +135,26 @@ async def log_dispatch(ctx: DispatchContext, call_next):
 - First registered middleware is **outermost** (runs first on the way in, last on the way out).
 - Use **`ctx.app`** inside middleware when dispatch runs from a `WorkerApp`.
 - Use **`ctx.state`** for per-message shared data between middleware layers.
-- Failed middleware or handlers still dequeue the message (existing behavior); there is no automatic requeue.
+
+### Ack policy (`work()`)
+
+| Outcome | Ack (`dequeue`)? |
+|---------|------------------|
+| Handler / middleware success | Yes |
+| Handler / middleware exception (except `ReleaseMessage`) | Yes (poison messages do not spin forever) |
+| Process crash mid-handler | No — adapters with visibility timeout reclaim later (at-least-once) |
+| Raise **`ReleaseMessage`** | No — retry after visibility timeout |
+| Soft-skip (omit `call_next`, no raise) | Yes (intentional drop) |
+
+```python
+from command_bus import ReleaseMessage
+
+@app.middleware
+async def retry_later_if_busy(ctx, call_next):
+    if busy():
+        raise ReleaseMessage()
+    await call_next(ctx)
+```
 
 Class-based middleware:
 

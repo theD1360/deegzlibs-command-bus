@@ -9,7 +9,6 @@ from typing import List, Optional, Sequence, Tuple, Union
 from .adapters.queue.file import FileQueueAdapter
 from .adapters.queue.in_memory import InMemoryQueueAdapter
 from .adapters.queue.in_memory_pubsub import InMemoryPubSubAdapter
-from .adapters.queue.rabbitmq import RabbitMqQueueAdapter
 from .adapters.queue.redis import RedisQueueAdapter
 from .adapters.queue.sqs import SqsQueueAdapter
 from .bus import CommandBus
@@ -17,6 +16,11 @@ from .command_bus_group import BusGroup, CommandBusGroup, resolve_bus_attr_on_mo
 from .event_bus import EventBus
 from .interfaces import QueueAdapter
 from .worker_app import WorkerApp
+
+try:
+    from .adapters.queue.rabbitmq import RabbitMqQueueAdapter as _RabbitMqQueueAdapter
+except ImportError:  # pragma: no cover - optional [rabbitmq] extra
+    _RabbitMqQueueAdapter = None  # type: ignore[misc, assignment]
 
 BusTarget = Union[CommandBus, EventBus, WorkerApp, BusGroup, CommandBusGroup]
 
@@ -161,7 +165,7 @@ def get_message_count(adapter: QueueAdapter) -> Optional[int]:
         return visible + not_visible + delayed
     if isinstance(adapter, FileQueueAdapter):
         return adapter.pending_message_count()
-    if isinstance(adapter, RabbitMqQueueAdapter):
+    if _RabbitMqQueueAdapter is not None and isinstance(adapter, _RabbitMqQueueAdapter):
         channel = adapter._ensure_connection()
         result = channel.queue_declare(queue=adapter.queue_name, passive=True)
         return int(result.method.message_count)
@@ -201,7 +205,7 @@ def purge_queue(adapter: QueueAdapter) -> int:
         return count
     if isinstance(adapter, FileQueueAdapter):
         return adapter.purge_messages()
-    if isinstance(adapter, RabbitMqQueueAdapter):
+    if _RabbitMqQueueAdapter is not None and isinstance(adapter, _RabbitMqQueueAdapter):
         channel = adapter._ensure_connection()
         result = channel.queue_purge(queue=adapter.queue_name)
         return int(result.method.message_count)

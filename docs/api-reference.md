@@ -21,6 +21,10 @@ Abstract handler. Subclass and implement **`process(self, message)`**. Can retur
 
 **Deprecated:** **`CommandHandler`** (alias for **`Handler`**).
 
+### ReleaseMessage
+
+Exception raised from a handler or middleware so **`work()`** skips ack/`dequeue`. Adapters with visibility timeout (SQS, File, Redis Streams) make the message available again after the timeout. Soft-skip without raising still acks (intentional drop). See [WorkerApp ack policy](worker-app.md).
+
 ### Router
 
 Maps message types to handler classes.
@@ -86,7 +90,7 @@ Implement **`enqueue(message_instance, delay_seconds=0)`**, **`dequeue(message_i
 - **InMemoryQueueAdapter** – In-memory FIFO.
 - **SqsQueueAdapter** – AWS SQS. Extra: `[sqs]` or `[boto3]`.
 - **RabbitMqQueueAdapter** – RabbitMQ. Extra: `[rabbitmq]`.
-- **RedisQueueAdapter** – Redis Lists. Extra: `[redis]`.
+- **RedisQueueAdapter** – Redis Streams (consumer groups, visibility timeout / reclaim). Extra: `[redis]`. Requires Redis ≥ 6.2. Helper: **`migrate_redis_list_to_stream`**.
 - **InMemoryPubSubAdapter** – In-memory fan-out.
 - **RedisPubSubAdapter** – Redis Pub/Sub. Extra: `[redis]`.
 - **RabbitMqFanoutAdapter** – RabbitMQ fanout exchange. Extra: `[rabbitmq]`.

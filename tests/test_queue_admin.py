@@ -55,6 +55,35 @@ def test_in_memory_count_drain_purge():
     assert get_message_count(adapter) == 0
 
 
+def test_redis_streams_count_drain_purge():
+    from unittest.mock import MagicMock
+
+    from command_bus.adapters.queue.redis import RedisQueueAdapter
+
+    redis_mock = MagicMock()
+    redis_mock.xlen.return_value = 2
+    redis_mock.exists.return_value = 1
+    redis_mock.xautoclaim.return_value = ("0-0", [])
+    redis_mock.xreadgroup.side_effect = [
+        [("q", [("1-0", {"body": "a"}), ("2-0", {"body": "b"})])],
+        [],
+    ]
+    adapter = RedisQueueAdapter(
+        redis_client=redis_mock,
+        queue_name="q",
+        consumer_name="admin",
+    )
+
+    assert get_message_count(adapter) == 2
+    assert drain_queue(adapter) == 2
+    assert redis_mock.xack.call_count == 2
+    assert redis_mock.xdel.call_count == 2
+
+    redis_mock.xlen.return_value = 1
+    assert purge_queue(adapter) == 1
+    redis_mock.delete.assert_called_with("q")
+
+
 def test_select_queues_filters():
     adapter = InMemoryQueueAdapter(queue_name="q")
     bus = CommandBus(queue_adapter=adapter, command_router=Router())

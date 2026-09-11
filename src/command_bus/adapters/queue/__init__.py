@@ -31,9 +31,13 @@ except ImportError:
     pass
 
 try:
-    from .redis import RedisCommandBusAdapter, RedisQueueAdapter
+    from .redis import RedisCommandBusAdapter, RedisQueueAdapter, migrate_redis_list_to_stream
 
-    __all__ += ["RedisQueueAdapter", "RedisCommandBusAdapter"]
+    __all__ += [
+        "RedisQueueAdapter",
+        "RedisCommandBusAdapter",
+        "migrate_redis_list_to_stream",
+    ]
 except ImportError:
     pass
 
